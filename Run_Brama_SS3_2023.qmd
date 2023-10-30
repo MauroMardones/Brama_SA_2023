@@ -59,7 +59,6 @@ library(viridis)
 # Defino directorios
 diri<-here("images")
 dir1<-here("s1") # Modelo todas las flotas
-dir1b<-here("s1b") # Modelo todas las flotas pero solo Indice Espinel
 dir2<-here("s2") # Flota Artesanal Enmalle 
 dir3<-here("s3") # Flotas artesanales (Espinel y Enmalle)
 dir4<-here("s4") # Flota Artesanal Espinel (Modelo Base)
@@ -158,13 +157,12 @@ En la Tabla 3. se enumeran y describen los escenarios de modelación en función
 
 | Escenario | Descripción                                      |
 |:---------:|:-------------------------------------------------|
-|    s1     | Todas las flotas                                 |
-|    s1a    | Todas las flotas (comps Edades Industrial)       |
-|    s1b    | Modelo todas las flotas pero solo Indice Espinel |
-|    s2     | Flota Artesanal Enmalle                          |
-|    s3     | Flotas artesanales (Espinel y Enmalle)           |
-|    s4     | Flota Artesanal Espinel (Modelo Base)            |
-|    s5     | Indice Biomasa Zhou [@Zhou2009; @Zhou2013]       |
+|    s1     | Todas las flotas (Desembarque, CPUE, Tallas x flota)   |
+|    s4     | Flota Artesanal Espinel (Modelo Base) cv 0.3           |
+|    s5     | Flota Artesanal Espinel (Modelo Base) cv 0.4  |
+|    s5     | Flota Artesanal Espinel (Modelo Base) cv 0.5  |
+|    s5     | Flota Artesanal Espinel (Modelo Base) Nsamp Tallas 70 |
+|    s5     | Flota Artesanal Espinel (Modelo Base) con Capturas SMRPFO  |
 
 : Escenarios y descripción de los modelos de evaluación de Reineta 2022 {tbl-colwidths="\[15,50\]"}
 
@@ -264,19 +262,22 @@ SSplotData(base.model3, subplot = 1,
            fleetcol = c(2,5))
 ```
 
-
+### Datos utilizados en `s4`
 ```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
 ### s4 (Flota Artesanal Espinel (Modelo Base)
-r4ss::run_SS_models(dirvec = dir4, model = './ss_osx', 
-                    skipfinished = FALSE)
+setwd("~/IFOP/CBA/REINETA/Brama_2022/s4")
+#dir()
+system('./ss_osx') 
+#r4ss::run_SS_models(dirvec = dir4, model = './ss_osx', 
+#                    skipfinished = FALSE)
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
-base.model4 <- SS_output(dir=dir4,covar=F,forecast=F)
+base.model4 <- SS_output(dir=dir4,covar=T,forecast=F)
 
 ```
 
-### Datos utilizados en `s4`
+
 
 El modelo *s4* contiene los datos de espinel de la flota artesanal de reineta que se presentan a continuación en la Figura 4.
 
@@ -480,7 +481,7 @@ SSplotBiology(base.model5, subplots =1, labels = c("Length (cm)", "Age (yr)", "M
 
 Una de las mas básicas formas de identificar el desempeño de los modelos es mirando los ajustes asociados a la estimación de parámetros y variables. En primer lugar observamos los ajustes a las tallas de cada escenario.
 
-```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s1", fig.pos="H"}
+```{r fig.cap="Ajuste Tallas s1", fig.pos="H"}
 SSplotComps(base.model1, subplots = 1,
             fleetnames = c("Espinel", "Enmalle", "Industrial"),
             sizemethod = 2,
@@ -522,11 +523,11 @@ La estimación de biomasa total por modelo da cuenta de las diferencias entre mo
 
 ::: {layout-ncol="3"}
 
-```{r fig.height=3,fig.width=3, fig.cap="Biomasa total s1", fig.pos="H"}
+```{r fig.cap="Biomasa total s1", fig.pos="H"}
 SSplotTimeseries(base.model1, subplot = 1)
 ```
 
-```{r fig.height=3,fig.width=3, fig.cap="Biomasa total s2", fig.pos="H"}
+```{r fig.cap="Biomasa total s2", fig.pos="H"}
 SSplotTimeseries(base.model2, subplot = 1)
 ```
 
@@ -535,7 +536,7 @@ SSplotTimeseries(base.model3, subplot = 1)
 ```
 
 
-```{r fig.height=3,fig.width=3, fig.cap="Biomasa total s4", fig.pos="H"}
+```{r fig.cap="Biomasa total s4", fig.pos="H"}
 SSplotTimeseries(base.model4, subplot = 1)
 ```
 
@@ -583,15 +584,15 @@ SSplotRecdevs(base.model5, subplot = 2)
 La mortalidad por pesca se identifica en las siguientes figuras.
 
 ::: {layout-ncol="3"}
-```{r fig.height=3,fig.width=3, fig.cap=" Mortalidad pot Pesca s1", fig.pos="H"}
+```{r fig.cap=" Mortalidad pot Pesca s1", fig.pos="H"}
 SSplotSummaryF(base.model1)
 ```
 
-```{r fig.height=3,fig.width=3, fig.cap=" Mortalidad pot Pesca s2", fig.pos="H"}
+```{r fig.cap=" Mortalidad pot Pesca s2", fig.pos="H"}
 SSplotSummaryF(base.model2)
 ```
 
-```{r fig.height=3,fig.width=3, fig.cap=" Mortalidad pot Pesca s3", fig.pos="H"}
+```{r  fig.cap=" Mortalidad pot Pesca s3", fig.pos="H"}
 SSplotSummaryF(base.model3)
 ```
 
