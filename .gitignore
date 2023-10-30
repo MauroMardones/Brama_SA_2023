@@ -12,3 +12,4 @@ s6/
 s7/
 images/
 *.html
+*.Rdata

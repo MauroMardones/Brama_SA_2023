@@ -243,6 +243,139 @@ SS_plots(base.model2,
          forecast=T)
 ```
 
+### Datos utilizados en `s3`
+
+```{r eval=FALSE, message=F, include=FALSE}
+# datos version ultima
+#OR 
+r4ss::run(
+  dir = dir3,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
+```
+
+
+```{r message=F, include=FALSE}
+base.model3 <- SS_output(dir=dir3,
+                        covar=T,
+                        forecast=T)
+```
+
+Saco los outputs en html
+
+```{r eval=FALSE,  message=F, include=FALSE}
+SS_plots(base.model3, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+### Datos utilizados en `s4`
+
+```{r eval=FALSE, message=F, include=FALSE}
+# datos version ultima
+#OR 
+r4ss::run(
+  dir = dir4,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
+```
+
+
+```{r message=F, include=FALSE}
+base.model4 <- SS_output(dir=dir4,
+                        covar=T,
+                        forecast=T)
+```
+
+Saco los outputs en html
+
+```{r eval=FALSE,  message=F, include=FALSE}
+SS_plots(base.model4, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+### Datos utilizados en `s5`
+
+```{r eval=FALSE, message=F, include=FALSE}
+# datos version ultima
+#OR 
+r4ss::run(
+  dir = dir5,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
+```
+
+
+```{r message=F, include=FALSE}
+base.model5 <- SS_output(dir=dir5,
+                        covar=T,
+                        forecast=T)
+```
+
+Saco los outputs en html
+
+```{r eval=FALSE,  message=F, include=FALSE}
+SS_plots(base.model5, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+### Datos utilizados en `s6`
+
+```{r eval=FALSE, message=F, include=FALSE}
+# datos version ultima
+#OR 
+r4ss::run(
+  dir = dir6,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
+```
+
+
+```{r message=F, include=FALSE}
+base.model6 <- SS_output(dir=dir6,
+                        covar=T,
+                        forecast=T)
+```
+
+Saco los outputs en html
+
+```{r eval=FALSE,  message=F, include=FALSE}
+SS_plots(base.model6, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+
 ### Datos utilizados en `s7`
 
 ```{r eval=FALSE, message=F, include=FALSE}
@@ -577,39 +710,54 @@ SSplotSummaryF(base.model5)
 
 Los análisis retrospectivo, dan cuenta de diferencias de estimación (sub - sobreestimación) en los patrones entre modelos evaluados. 
 
-```{r warning = FALSE, message = FALSE, echo=FALSE}
-mydir1 <- dir1
+## Retro `s1`
 
-SS_doRetro(
-  masterdir = mydir1,
-  oldsubdir = "",
-  newsubdir = "retrospectives",
-  years = 0:-5
-)
+```{r warning = FALSE, message = FALSE, echo=FALSE}
+retro(dir=dir1, oldsubdir="", 
+      newsubdir="Retrospective", 
+      years= 0:-5,
+      exe="ss_osx",
+      extras = "-nox", 
+      skipfinished = F)
+
+retroModels1 <- SSgetoutput(dirvec=file.path(dir1, "Retrospective",
+                                             paste("retro",0:-5,
+                                                   sep="")))
+retroSummary1 <- SSsummarize(retroModels1)
+endyrvec <- retroSummary1$endyrs + 0:-5
+#save(retroSummary1, retroModels1, file="retro5.Rdata")
+
+
+SSplotRetro(retroSummary1,
+            add=T,
+            forecast = F,
+            legend = F,
+            verbose=F)
 ```
 
-```{r eval=F, include=F , message=F}
-mydir1 <- dir1
-retroModels <- SSgetoutput(
-  dirvec = file.path(mydir1, "retrospectives", paste("retro", 0:-5, sep = ""))
-)
-retroSummary <- SSsummarize(retroModels)
-endyrvec <- retroSummary[["endyrs"]] + 0:-5
+## Retro `s7`
+
+```{r warning = FALSE, message = FALSE, echo=FALSE}
+retro(dir=dir7, oldsubdir="", 
+      newsubdir="Retrospective", 
+      years= 0:-5,
+      exe="ss_osx",
+      extras = "-nox", 
+      skipfinished = F)
+
+retroModels7 <- SSgetoutput(dirvec=file.path(dir7, "Retrospective",
+                                             paste("retro",0:-5,
+                                                   sep="")))
+retroSummary7 <- SSsummarize(retroModels7)
+endyrvec <- retroSummary7$endyrs + 0:-5
+#save(retroSummary7, retroModels7, file="retros7.Rdata")
 
 
-dc1='~/IFOP/CBA/REINETA/Brama_2022/s1/retrospectives'
-SSplotComparisons(retroSummary,
-  endyrvec = endyrvec,
-  subplots = 1:4,
-  legendlabels = paste("Data", 0:-5, "years"),
-  print = TRUE,
-  png = TRUE,
-  plot=TRUE,
-  models = "all",
-  plotdir = dc1
-)
-
-
+SSplotRetro(retroSummary7,
+            add=T,
+            forecast = F,
+            legend = F,
+            verbose=F)
 ```
 
 ::: {layout-ncol="2"}
@@ -779,13 +927,25 @@ print = TRUE, png = TRUE, models = "all",plotdir = dc5
 La siguiente Tabla muestra los componentes de la probabilidad asociados a la estimación de cada escenario testeado en este documento. A su vez se identifican los parámetros estimados por cada assessment. Tambien podemos identificar las diferencias entre modelos en las principales variables poblacionales estimadas para lostres escenarios (*s2*, *s3*, *s4* y *s5*)
 
 ```{r message=F}
-mod.sum <- SSsummarize(list( base.model2, base.model3, base.model4, base.model5))
+mod.sum <- SSsummarize(list(base.model1,
+                            base.model2,
+                            base.model3,
+                            base.model4, 
+                            base.model5,
+                            base.model6,
+                            base.model7))
 
 ```
 
 ```{r eval=F, message=F}
 SSplotComparisons(mod.sum,
-                legendlabels=c( "s2", "s3", "s4", "s5"), 
+                legendlabels=c( "s1",
+                                "s2",
+                                "s3",
+                                "s4",
+                                "s5",
+                                "s6",
+                                "s7"), 
                 print = TRUE, 
                 plot=TRUE,
                 png = TRUE, models = "all",
