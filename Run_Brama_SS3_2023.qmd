@@ -63,6 +63,8 @@ dir2<-here("s2") # Flota Artesanal Enmalle
 dir3<-here("s3") # Flotas artesanales (Espinel y Enmalle)
 dir4<-here("s4") # Flota Artesanal Espinel (Modelo Base)
 dir5<-here("s5") # Indice Biomasa Zhou [@Zhou2009]
+dir6<-here("s6") # Version 3.30.21
+dir7<-here("s7") # Version 3.30.21
 ```
 
 # ANTECEDENTES
@@ -157,12 +159,13 @@ En la Tabla 3. se enumeran y describen los escenarios de modelación en función
 
 | Escenario | Descripción                                      |
 |:---------:|:-------------------------------------------------|
-|    s1     | Todas las flotas (Desembarque, CPUE, Tallas x flota)   |
-|    s4     | Flota Artesanal Espinel (Modelo Base) cv 0.3           |
-|    s5     | Flota Artesanal Espinel (Modelo Base) cv 0.4  |
-|    s5     | Flota Artesanal Espinel (Modelo Base) cv 0.5  |
-|    s5     | Flota Artesanal Espinel (Modelo Base) Nsamp Tallas 70 |
-|    s5     | Flota Artesanal Espinel (Modelo Base) con Capturas SMRPFO  |
+|    s1     | Flotas Espinel, Enmalle, Industrial cv 0.2 , 0.75 h (base) |
+|    s2     | Flotas Espinel, Enmalle, Industrial cv 0.3 índice          |
+|    s3     | Flotas Espinel, Enmalle, Industrial cv 0.4 índice  |
+|    s4     | Flotas Espinel, Enmalle, Industrial cv 0.5  indice |
+|    s5     | Flotas Espinel, Enmalle, Industrial 0.6 h         |
+|    s6     | Flotas Espinel, Enmalle, Industrial Nsamp Tallas 25 |
+|    s7     | Flotas Espinel, Enmalle, Industrial y Capturas SMRPFO  |
 
 : Escenarios y descripción de los modelos de evaluación de Reineta 2022 {tbl-colwidths="\[15,50\]"}
 
@@ -175,142 +178,103 @@ Cabe mencionar que el modelo utilizado para la toma de decisiones esta basado en
 Al momento de la elaboración de este informe, existen tres modelos implementados a la fecha, a saber el *s2*, *s3*, *s4* y *s5*. Estos modelos seran presentados a continuación en referencia las piezas de información disponibles y salidas de la evaluación.
 
 ### Datos utilizados en `s1`
-```{r eval= F, message=FALSE, warning=FALSE, include=FALSE}
-### s1 ( Todas las flotas )
-setwd("~/IFOP/CBA/REINETA/Brama_2022/s1")
-#dir()
-system('./ss_osx') 
-#r4ss::run(dirvec = dir1, model = './ss_osx', 
-#                    skipfinished = F)
-```
 
-```{r  message=FALSE, warning=FALSE, include=FALSE}
-base.model1 <- SS_output(dir=dir1,covar=T,forecast=F)
-```
-
-
-```{r echo=FALSE, fig.height=4,fig.width=5, fig.pos="H", fig.cap=" Datos utilizados en s1"}
-SSplotData(base.model1, subplot = 2, 
-           fleetnames = c("Espinel", "Enmalle", "Industrial"),
-           fleetcol = c(2,5, "blue"))
+```{r eval=FALSE, message=F, include=FALSE}
+# datos version ultima
+#OR 
+r4ss::run(
+  dir = dir1,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
 ```
 
 
-```{r eval= F, message=FALSE, warning=FALSE, include=FALSE}
-### s1 ( Todas las flotas indice espinel )
-r4ss::run_SS_models(dirvec = dir1b, model = './ss_osx', 
-                    skipfinished = FALSE)
+```{r message=F, include=FALSE}
+base.model1 <- SS_output(dir=dir1,
+                        covar=T,
+                        forecast=T)
 ```
 
-```{r eval= F, message=FALSE, warning=FALSE, include=FALSE}
-base.model1b <- SS_output(dir=dir1b,covar=F,forecast=F)
-```
+Saco los outputs en html
 
-```{r echo=FALSE, eval= F, fig.height=10,fig.width=6,fig.align="center", fig.cap="Distribución"}
-SSplotData(base.model1b, subplot = 2, 
-           fleetnames = c("Espinel", "Enmalle", "Industrial"),
-           fleetcol = c(2,5, 6))
+```{r eval=FALSE,  message=F, include=FALSE}
+SS_plots(base.model1, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
 ```
-
 
 ### Datos utilizados en `s2`
 
-```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
-### s2 (Flota Artesanal Enmalle)
-setwd("~/IFOP/CBA/REINETA/Brama_2022/s2")
-#dir()
-system('./ss_osx') 
-#(Este modelo está por implemetar. Cambiar versión de SS3.)
-#r4ss::run_SS_models(dirvec = dir2, model = './ss_osx', 
-#                    skipfinished = FALSE)
+```{r eval=FALSE, message=F, include=FALSE}
+# datos version ultima
+#OR 
+r4ss::run(
+  dir = dir2,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
 ```
 
 
-```{r message=FALSE, warning=FALSE, include=FALSE}
-base.model2 <- SS_output(dir=dir2,covar=T,forecast=T)
+```{r message=F, include=FALSE}
+base.model2 <- SS_output(dir=dir2,
+                        covar=T,
+                        forecast=T)
+```
+
+Saco los outputs en html
+
+```{r eval=FALSE,  message=F, include=FALSE}
+SS_plots(base.model2, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+### Datos utilizados en `s7`
+
+```{r eval=FALSE, message=F, include=FALSE}
+# datos version ultima
+#OR 
+r4ss::run(
+  dir = dir7,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
 ```
 
 
-
-El modelo *s2* contiene los datos de enmalle de la flota artesanal de reineta que se presentan a continuación en la Figura 2.
-
-```{r fig.height=4,fig.width=5,fig.cap="\\label{fig:fig} Datos utilizados en s2",fig.pos="H"}
-
-SSplotData(base.model2, subplot = 1, 
-           fleetnames = c("Enmalle"),
-           fleetcol = c(5))
+```{r message=F, include=FALSE}
+base.model7 <- SS_output(dir=dir7,
+                        covar=T,
+                        forecast=T)
 ```
 
-```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
-### s3 (Flotas artesanales (Espinel y Enmalle))
-r4ss::run_SS_models(dirvec = dir3, model = './ss_osx', 
-                    skipfinished = FALSE)
+Saco los outputs en html
+
+```{r eval=FALSE,  message=F, include=FALSE}
+SS_plots(base.model7, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
 ```
-
-```{r message=FALSE, warning=FALSE, include=FALSE}
-base.model3 <- SS_output(dir=dir3,covar=F,forecast=F)
-
-```
-
-### Datos utilizados en `s3`
-
-El modelo *s2* contiene los datos de enmalle y espinel de la flota artesanal de reineta que se presentan a continuación en la Figura 2.
-
-```{r echo= FALSE, fig.height=4,fig.width=5,fig.align="center", fig.cap="\\label{fig:fig} Datos utilizados en s3 para reineta", fig.pos="H"}
-SSplotData(base.model3, subplot = 1, 
-           fleetnames = c("Espinel", "Enmalle"),
-           fleetcol = c(2,5))
-```
-
-### Datos utilizados en `s4`
-```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
-### s4 (Flota Artesanal Espinel (Modelo Base)
-setwd("~/IFOP/CBA/REINETA/Brama_2022/s4")
-#dir()
-system('./ss_osx') 
-#r4ss::run_SS_models(dirvec = dir4, model = './ss_osx', 
-#                    skipfinished = FALSE)
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
-base.model4 <- SS_output(dir=dir4,covar=T,forecast=F)
-
-```
-
-
-
-El modelo *s4* contiene los datos de espinel de la flota artesanal de reineta que se presentan a continuación en la Figura 4.
-
-```{r fig.height=4,fig.width=5,fig.align="center", fig.cap="Datos utilizados en s4 para reineta", fig.pos="H"}
-SSplotData(base.model4, subplot = 1, 
-           fleetnames = "Espinel",
-           fleetcol = 2)
-```
-
-
-```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
-### s5 (Indice Biomasa Zhou [@Zhou2009])
-#(Modelo aún no implementado)
-r4ss::run_SS_models(dirvec = dir5, model = './ss_osx', 
-                    skipfinished = FALSE)
-```
-
-
-```{r message=FALSE, warning=FALSE, include=FALSE}
-base.model5 <- SS_output(dir=dir5,covar=F)
-```
-
-### Datos utilizados en `s5`
-
-El modelo *s5* contiene los datos de espinel de la flota artesanal de reineta y un indice de biomasa proveniente del modelo de producción de @Zhou2009.
-
-```{r fig.height=4,fig.width=5,fig.align="center", fig.cap="Datos utilizados en s4 para reineta", fig.pos="H"}
-SSplotData(base.model5, subplot = 1, 
-           fleetnames = c("Espinel", "Biomasa Zhou"),
-           fleetcol = c(2,"green"))
-```
-
-
 ### Desembarques
 
 
@@ -482,10 +446,11 @@ SSplotBiology(base.model5, subplots =1, labels = c("Length (cm)", "Age (yr)", "M
 Una de las mas básicas formas de identificar el desempeño de los modelos es mirando los ajustes asociados a la estimación de parámetros y variables. En primer lugar observamos los ajustes a las tallas de cada escenario.
 
 ```{r fig.cap="Ajuste Tallas s1", fig.pos="H"}
-SSplotComps(base.model1, subplots = 1,
+SSplotComps(base.model, subplots = 1,
             fleetnames = c("Espinel", "Enmalle", "Industrial"),
             sizemethod = 2,
-            smooth = TRUE)
+            smooth = TRUE,
+            maxcols = 4)
 ```
 
 ```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s2", fig.pos="H"}
@@ -524,7 +489,7 @@ La estimación de biomasa total por modelo da cuenta de las diferencias entre mo
 ::: {layout-ncol="3"}
 
 ```{r fig.cap="Biomasa total s1", fig.pos="H"}
-SSplotTimeseries(base.model1, subplot = 1)
+SSplotTimeseries(base.model, subplot = 7)
 ```
 
 ```{r fig.cap="Biomasa total s2", fig.pos="H"}
