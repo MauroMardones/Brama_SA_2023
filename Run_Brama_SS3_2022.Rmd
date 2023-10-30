@@ -1,0 +1,441 @@
+---
+title: "![](logo_ifop.png){width=4cm}"
+output:
+  pdf_document:
+    includes:
+      before_body: titulo.sty
+    keep_tex: yes
+    number_sections: no
+    toc: true
+    toc_depth: 3
+bibliography: reineta.bib
+csl: apa.csl
+link-citations: yes
+linkcolor: blue
+indent: no
+header-includes:
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \fancyhf{}
+- \lfoot[\thepage]{}
+- \rfoot[]{\thepage}
+---
+
+
+```{=tex}
+\fontsize{12}{20}
+\selectfont
+```
+
+\pagebreak
+
+# 1. ANTECEDENTES
+
+## 1.1. Descripción y objetivo del documento
+
+Este documento contiene el flujo de análisis y modelación de los distintos escenarios de *Brama australis* Reineta para la zona centro sur de Chile como parte de la asesoría técnica que lleva a cabo el IFOP, mediante el Grupo Técnico Demersal y Crustáceos del Departamento de Evaluación de Recursos.
+
+# 2. METODOLOGÍA
+
+## 2.2. Área de estudio
+
+El área de estudio comprende la principal área de operación de la flota arrastrera correspondiente a la zona centro sur de Chile entre el límite norte de la IV región y los 41°28'S. Donde a lo largo de la costa operan las flotas artesanal con redes de enmalle y espinel, mientras que la flota de industrial desarrolla su operación de captura con arrastre.
+
+```{r echo=FALSE, out.width = "130%", fig.align='center', fig.cap= "Zona de Estudio Reineta Assessment"}
+knitr::include_graphics("images/area.jpeg")
+```
+
+\pagebreak
+
+## 2.3. Datos utilizados
+
+a.  Desembarque industrial y artesanal del período (1994-2021), provenientes de las estadisticas oficiales de Sernapesca (Subsecretaria de Pesca, 2021). Cabe señalar que en esta pesquería aun no se realizan procesos de corrección de desembarques.
+b.  Información del Programa de Seguimiento de la pesquería de pesquerías demersales del Instituto de Fomento Pesquero.
+
+La información proviene del monitoreo artesanal en la zona centro-sur de Chile, obteniendose datos de: i) estructura de tamaños, ii) composiciones por edad, iii) parámetros de crecimiento y iv) peso anuales por edad/talla y años.
+
+c.  En el caso de la pesquería industrial, se cuenta con una abundancia a la edad entre los años 2017 y 2021.
+
+El esquema considera un enfoque de modelación secuencial por flotas artesanal e industrial. Al disponer de los desembarques oficiales por flota, es posible segregar información oficial por flotas, siendo factible a la vez disponer de datos oficiales (reportados).
+
+## 2.4. Modelo de evaluación
+
+El modelo de dinámica poblacional de la reinenta, corresponde a un enfoque de evaluación del tipo estadístico con estructura de edad, donde la dinámica progresa avanzando en el tiempo t, y las capturas son causantes de la mortalidad por pesca F, la mortalidad natural es constante M = 0,35. La relación entre la población y las capturas responde a la base de la ecuación de Baranov, y se consideran para el modelo y estimaciones el rango de edad entre 2 a 12+ (años). Sin embargo, las estimaciones del modelo tienen su origen en la edad cero sobre la base de una condición inicial estado estable. La dinámica esta modelada por un reclutamiento tipo Beverton y Holt.
+
+Para avanzar en la implenteación metodológica, se establece con fines comparativos modelo por flotas artesanales, donde un modelo utiliza la información de enmalle artesanal, para luego sumar la flota enmalle artesanal, para terminar incorporando la información de la flota industrial (Tabla 1).
+
+\pagebreak
+
+| Escenario | Descripción                            |
+|-----------|----------------------------------------|
+| s1        | Todas las flotas                       |
+| s2        | Flota Artesanal Enmalle                |
+| s3        | Flotas artesanales (Espinel y Enmalle) |
+| s4        | Flota Artesanal Espinel                |
+| s5        | Indice Biomasa Zhou (Zhou et al., 2008.|
+
+## 2.5. Plataforma de modelación
+
+Los modelos implementados fueron configurados utilizando Stock Synthesis (SS3 de aqui en mas)(<https://vlab.noaa.gov/web/stock-synthesis>), que es un modelo de evaluación de stock edad y talla estrucuturado, en la clase de modelo denominado "Modelo de análisis integrado". SS tiene un sub-modelo poblacional de stock que simula crecimiento, madurez, fecundidad, reclutamiento, movimiento, y procesos de mortalidad, y sub-modelos de observation y valores esperados para diferentes tipos de datos. El modelo es codificado en C++ con parámetros de estimación activados por diferenciación automática (ADMB) [@Methot2013]. El análisis de resultados y salidas emplea herramientas de R e interfase gráfica de la librería *r4ss* (<https://github.com/r4ss/r4ss>) [@Taylor2019].
+
+Se realiza una modelación con la plataforma SS3 (V.3.30.19) y sus outputs leídos con la librería "r4ss" [@Taylor2019]
+
+Modelo base de evaluación de *Brama australis* en la zona Centro Sur de Chile integrando la información relativa a las tres flotas que operan en el recurso. A saber;
+
+-   Espinel Artesanal (1)
+-   Enmalle Artesanal (2)
+-   Industrial (3)
+
+\pagebreak
+
+# 3. RESULTADOS
+
+Instalación de las librerias necesarias
+
+```{r eval=TRUE, echo=F}
+# en caso no se tengan las dependencias
+# install.packages("devtools")
+# devtools::install_github("r4ss/r4ss", ref="development")
+# install.packages("caTools")
+# library("caTools")
+# # install.packages("r4ss")
+library(r4ss)
+library(here)
+#remotes::install_github("PIFSCstockassessments/ss3diags")
+library(ss3diags) # diagnosticos del modelo
+library(ss3sim) # evaluación de sesgo
+```
+
+
+## 3.1. Principales salidas de modelos y variables poblacionales
+
+
+Los componentes de verosimilitud, además de los análisis de residuales permiten identificar entre los bloques de modelos cuales de las configuraciones presenta un desempeño adecuado
+en términos estadísticos de ajuste a la información. 
+
+Estos modelos, son los seleccionados para presentar en sus principales salidas para fines informativos de indicadores, puntos biológicos de referencia y estimaciones poblacionales.
+
+
+```{r eval=FALSE}
+# Es posible correr todos los modelos juntos
+path.1<- file.path(here(c("s1", "s2", "s3", "s4")))
+list.files (path =path.1)
+
+# otra forma de correr
+r4ss::run_SS_models(dirvec = path.1, model = './ss_osx', 
+                    skipfinished = FALSE)
+# Considerar que al correr el modelo dentro de cada `chunk` se cambia el directorio.
+```
+
+
+### 3.1.1. Mod s1 ( Todas las flotas )
+
+Corro escenario por separado 1 Full data
+
+```{r eval= F, message=FALSE, warning=FALSE, include=FALSE}
+dir1<-here("s1")
+r4ss::run_SS_models(dirvec = dir1, model = './ss_osx', 
+                    skipfinished = FALSE)
+```
+
+
+### 3.1.2. Mod s2 (Flota Artesanal Enmalle)
+
+*(Este modelo está por implemetar. Cambiar versión de SS3.)*
+
+```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
+dir2<-here("s2")
+
+r4ss::run_SS_models(dirvec = dir2, model = './ss_osx', 
+                    skipfinished = FALSE)
+```
+
+
+### 3.1.3. Mod s3 (Flotas artesanales (Espinel y Enmalle)
+
+Este modelo está implementado pero falta resolver los niveles de convergencia y los warning.
+
+
+```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
+r4ss::run_SS_models(dirvec = dir3, model = './ss_osx', 
+                    skipfinished = FALSE)
+```
+
+```{r echo=F, include=F,message=F}
+#Leo las salidas del modelo seleccionado. 
+
+dir3<-here("s3")
+base.model3 <- SS_output(dir=dir3,covar=F,forecast=F)
+```
+
+Data disponible para este escenario. Espinel es la serie mas consistente del conjunto de datos.
+
+```{r}
+SSplotData(base.model3, subplot = 2, 
+           fleetnames = c("Espinel", "Enmalle"),
+           fleetcol = c(2,5))
+```
+Read in Stock Synthesis files
+
+Stock Synthesis files can be read in as list objects in R using the SS_read*() functions.
+```{r}
+start <- r4ss::SS_readstarter(file = file.path(new_mod_path, "starter.ss"), 
+                              verbose = FALSE)
+# note the data and control file names can vary, so are determined from the 
+# starter file.
+dat <- r4ss::SS_readdat(file = file.path(new_mod_path, start$datfile),
+                        verbose = FALSE)
+# Read in ctl file. Note that the data fileR object is needed so that SS_readctl
+# assumes the correct data structure
+ctl <- r4ss::SS_readctl(file = file.path(dir3, start$ctlfil),
+                        verbose = FALSE,
+                        use_datlist = TRUE, datlist = dat)
+fore <- r4ss::SS_readforecast(file = file.path(dir3, "forecast.ss"),
+                              verbose = FALSE)
+# can also read in wtatage.ss for an empirical wt at age model using
+# r4ss::SS_readwtatage()
+```
+
+
+```{r}
+start <- r4ss::SS_readstarter(file = file.path(dir3, "starter.SS"), 
+                              verbose = FALSE)
+dat <- r4ss::SS_readdat(file = file.path(dir3, start$datfile),
+                        verbose = FALSE)
+ctl <- r4ss::SS_readctl(file = file.path(dir3, start$ctlfil),
+                        verbose = FALSE,
+                        use_datlist = TRUE, datlist = dat)
+class(dat)
+dat$lencomp
+
+```
+
+
+
+```{r}
+parbio <-ctl$MG_parms
+
+kbl(parbio, booktabs = T,format = "latex",
+    caption = "\\label{t1}Parámetros biológicos") %>%
+    kable_styling(latex_options = c("striped",
+                                  "condensed","scale_down"),
+                full_width = FALSE,font_size=8) %>% 
+  landscape()
+```
+
+
+```{r}
+SSplotCatch(base.model3, subplots = 2, fleetnames = c("Espinel", "Enmalle"),
+            fleetcols = c(2,5), forecastplot = T)
+```
+
+
+Respecto a los valores y parametros biologicos modelados, los siguientes graficos identifican los estimadores puntuales del recurso
+
+```{r}
+SSplotBiology(base.model3, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
+    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
+    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
+    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
+ )
+```
+
+aporte de las cohortes por año para las capturas.
+```{r}
+SSplotCohortCatch(base.model3, subplots = 1)
+```
+
+\quad
+
+AJuste de tallas por flota
+```{r}
+SSplotComps(base.model3, subplots = 1)
+```
+
+Otros plots
+```{r}
+SSplotDynamicB0(base.model3, uncertainty = F)
+#SSplotSPR(base.model3)
+SSplotPars(base.model3)
+
+```
+
+Salida de las biomasas con las dos flotas
+
+
+```{r}
+SSplotTimeseries(base.model3, subplot = 1)
+```
+
+
+### 3.1.4. Mod s4 (Flotas artesanal espinel)
+
+Este modelo está implementado pero falta resolver los niveles de convergencia y los warning. Este modelo ha sido el implementado en @Reineta2022
+
+
+```{r eval=F, message=FALSE, warning=FALSE, include=FALSE}
+dir4<-here("s4")
+
+r4ss::run_SS_models(dirvec = dir4, model = './ss_osx', 
+                    skipfinished = FALSE)
+```
+
+
+```{r echo=F, include=F, message=F}
+#Leo las salidas del modelo seleccionado. 
+
+dir4<-here("s4")
+base.model4 <- SS_output(dir=dir4,covar=F,forecast=F)
+```
+
+```{r}
+SSplotData(base.model4, fleetcol = 5, subplot = 2)
+
+```
+```{r eval=FALSE}
+p1 <-SS_readdat_3.30("s4/ss.dat", verbose = TRUE, echoall = FALSE,section = NULL)
+
+startfile <- SS_readstarter("s4/starter.ss_new")
+```
+
+
+Respecto a los valores y parametros biologicos modelados, los siguientes graficos identifican los estimadores puntuales del recurso
+
+```{r}
+SSplotBiology(base.model4,  subplot=1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
+    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
+    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
+    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
+ )
+```
+
+ahora miro los ajustes de las tallas por flota
+```{r}
+SSplotCohortCatch(base.model4, subplots = 2)
+```
+
+```{r}
+SSplotComps(base.model4, subplots = 1)
+SSplotDynamicB0(base.model4, uncertainty = F)
+SSplotSPR(base.model4)
+SSplotPars(base.model4)
+```
+
+```{r}
+SSplotTimeseries(base.model4, subplot = 1)
+
+```
+
+### 3.1.5. Mod s5 (Modelo Jerarquico. Indice Biomasa modelo Catch Based [@Zhou2009])
+
+Modelo no implemetado a la fecha
+
+
+```{r eval=F, message=FALSE, warning=FALSE, include=FALSE}
+dir5<-here("s5")
+
+r4ss::run_SS_models(dirvec = dir5, model = './ss_osx', 
+                    skipfinished = FALSE)
+```
+
+
+
+
+
+\pagebreak
+
+# 4. COMPARACION DE MODELOS
+
+(En desarrollo)
+
+```{r eval=FALSE}
+#PLOT labels, name of each model run
+legend.labels <- c('dir1','dir2','dir3', 'dir4')
+
+#read in all model runs
+#note if cover=T you need a hessian; if covar=F you do not need a hessian
+biglist <- SSgetoutput(keyvec = NULL, dirvec = c(SSdir1,SSdir2,SSdir3),	getcovar = F)
+
+#create summary of model runs from list above
+summaryoutput <- SSsummarize(biglist)
+
+SSplotComparisons(summaryoutput, subplots = 1:20, plot = TRUE,
+                  print = T, endyrvec = "default", indexfleets = NULL, indexUncertainty = FALSE,
+                  indexQlabel = TRUE, indexQdigits = 4, indexSEvec = "default",
+                  indexPlotEach = FALSE, labels = c("Year", "Spawning biomass (t)",
+                                                    "Relative spawning biomass", "Age-0 recruits (1,000s)",
+                                                    "Recruitment deviations", "Index", "Log index", "1 - SPR", "Density",
+                                                    "Management target", "Minimum stock size threshold", "Spawning output",
+                                                    "Harvest rate"), col = NULL, shadecol = NULL, pch = NULL,
+                  lty = 1, lwd = 2, spacepoints = 10, staggerpoints = 1,
+                  initpoint = 0, tickEndYr = TRUE, shadeForecast = TRUE,
+                  xlim = "default", ylimAdj = 1, xaxs = "r", yaxs = "r",
+                  type = "o", uncertainty = TRUE, shadealpha = 0.1, legend = TRUE,
+                  legendlabels = "default", legendloc = "topright",
+                  legendorder = "default", legendncol = 1, sprtarg = NULL,
+                  btarg = NULL, minbthresh = NULL, pwidth = 6.5, pheight = 5,
+                  punits = "in", res = 300, ptsize = 10, cex.main = 1,
+                  plotdir = "C:\\Users\\mauricio.mardones\\Documents\\IFOP\\Loco_Assessment_AMERB\\SA_Loco", 
+                  filenameprefix = "", densitynames = c("SSB_Virgin","R0"), 
+                  densityxlabs = "default", densityscalex = 1,
+                  densityscaley = 1, densityadjust = 1, densitysymbols = TRUE,
+                  densitytails = TRUE, densitymiddle = FALSE, densitylwd = 1,
+                  fix0 = TRUE, new = TRUE, add = FALSE, 
+                  par = list(mar = c(5, 4, 1, 1) + 0.1), 
+                  verbose = TRUE, mcmcVec = FALSE,
+                  show_equilibrium = TRUE)
+```
+
+Tablas comparativas
+
+
+```{r eval=F}
+SStableComparisons(summaryoutput,
+                   likenames = c("TOTAL", "Survey", "Length_comp", "Age_comp", "priors",
+                                 "Size_at_age"), names = c("Recr_Virgin", "R0", "steep", "NatM",
+                                                           "L_at_Amax", "VonBert_K", "SSB_Virg", "Bratio_2017", "SPRratio_2016"),
+                   digits = NULL, modelnames = "default", csv = FALSE,
+                   csvdir = "C:\\Users\\mauricio.mardones\\Documents\\IFOP\\Loco_Assessment_AMERB\\SA_Loco",
+                   csvfile = "parameter_comparison_table.csv", verbose = TRUE,
+                   mcmc = FALSE)
+```
+
+\pagebreak
+# 5. DIAGNÓSTICO
+
+```{r eval=F}
+
+#do retrospective model runs
+SS_doRetro(dir4, '', newsubdir = "retrospectives",
+           subdirstart = "retro", years = 0:-5, overwrite = TRUE, exefile = "ss",
+           extras = "-nox -nohess", intern = FALSE, CallType = "system",
+           RemoveBlocks = FALSE)
+retroModels <- SSgetoutput(dirvec=file.path(dir4, "retrospectives",paste("retro",0:-5,sep="")))
+retroSummary <- SSsummarize(retroModels)
+
+
+endyrvec <- retroSummary$endyrs + 0:-5
+SSplotComparisons(retroSummary, endyrvec=endyrvec, legendlabels=paste("Data",0:-5,"years"),
+                  plotdir='month\\',plot=TRUE,print=T)
+TableCompare <- SStableComparisons(retroSummary,likenames=like, names=names, 
+                                   modelnames=c('B','-1','-2','-3','-4','-5'), csv=TRUE, csvfile="RetroRuns.csv",verbose=FALSE)
+
+```
+
+\pagebreak
+
+# 6. PROGRESO
+
+- S1. Falta correr modelo implementado
+
+- s2. Falta correr data solo con enmalle. NO se si esto sea nenecsario para propositos de evaluación dado que este set de datos no se utiliza por si solo
+
+- s3. Mejorar ajustes de tallas y revisar outputs de variables poblacionales.
+
+- s4. Modelo solo de espinel. OK.
+
+- s5. Modelo con indice de biomasas de Zhou no implemetnado.
+
+\pagebreak
+
+# 6. REFERENCIAS

@@ -1,0 +1,882 @@
+---
+title: "![](logo_ifop.png){width=4cm}"
+format:
+  pdf:
+    toc: true
+    toc-title: "Indice de Contenidos"
+    number-sections: true
+    colorlinks: true
+    include-before-body: titulo.sty
+    fontfamily: libertinus
+    fontfamilyoptions:
+    - osf
+    - p
+    linestretch: 1.1
+    fontsize: 12pt
+bibliography: reineta.bib
+csl: apa.csl
+link-citations: yes
+linkcolor: blue
+geometry:
+  - top=20mm
+  - left=20mm
+  - right=20mm
+  - heightrounded
+header-includes:
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \fancyhf{}
+- \lfoot[\thepage]{}
+- \rfoot[]{\thepage}
+---
+
+\pagebreak
+
+```{r, setup, echo=FALSE,  include=FALSE, }
+knitr::opts_chunk$set(warning = FALSE, 
+                      message = FALSE,
+                      echo=FALSE)
+```
+
+```{r eval=TRUE}
+# en caso no se tengan las dependencias
+# install.packages("devtools")
+# devtools::install_github("r4ss/r4ss", ref="development")
+# install.packages("caTools")
+# library("caTools")
+# # install.packages("r4ss")
+library(r4ss)
+library(here)
+#remotes::install_github("PIFSCstockassessments/ss3diags")
+library(ss3diags) # diagnosticos del modelo
+library(ss3sim) # evaluación de sesgo
+library(kableExtra)
+library(tidyverse)
+library(viridis)
+```
+
+```{r echo=FALSE}
+# Defino directorios
+diri<-here("images")
+dir1<-here("s1") # Modelo todas las flotas
+dir1b<-here("s1b") # Modelo todas las flotas pero solo Indice Espinel
+dir2<-here("s2") # Flota Artesanal Enmalle 
+dir3<-here("s3") # Flotas artesanales (Espinel y Enmalle)
+dir4<-here("s4") # Flota Artesanal Espinel (Modelo Base)
+dir5<-here("s5") # Indice Biomasa Zhou [@Zhou2009]
+```
+
+# ANTECEDENTES
+
+## Descripción y objetivo del documento
+
+El principal objetivo de este documento es presentar los avances en la implementación del modelo de evaluación integrado para reineta *Brama australis* en la zona centro sur de Chile. Este proceso de evaluación ha sido implententado en Stock Synthesis con la finalidad de integrar distintas piezas de información disponible, analiar desempeño de los modelos y escenarios probados y por último, avanzar en la discusión sobre la utilidad de este tipo de aproximaciones metodologicas y vinculación con la asesoria de IFOP hacia el manejo.
+
+Por lo tanto, este documento contiene el flujo de análisis y modelación de los distintos escenarios de *Brama australis* Reineta como parte de la asesoría técnica que lleva a cabo el IFOP, mediante el Grupo Técnico Demersal y Crustáceos del Departamento de Evaluación de Recursos. 
+
+\pagebreak
+
+# METODOLOGÍA
+
+## Área de estudio
+
+El área de estudio comprende la principal área de operación de la flota arrastrera correspondiente a la zona centro sur de Chile entre el límite norte de la IV región y los 41°28'S. Donde a lo largo de la costa operan las flotas artesanal con redes de enmalle y espinel, mientras que la flota de industrial desarrolla su operación de captura con arrastre.
+
+![Modelo conceptual para la evaluación de stock de reineta](images/area.png){width=70%}
+
+
+\pagebreak
+
+## Modelo conceptual
+
+El modelo de la dinámica poblacional de reineta, corresponde a un enfoque de evaluación del tipo estadístico con estructura de edad, donde la dinámica progresa avanzando en el tiempo t, y las capturas son causantes de la mortalidad por pesca F, la mortalidad natural es constante M = 0,35. La relación entre la población y las capturas responde a la base de la ecuación de Baranov, y se consideran para el modelo y estimaciones el rango de edad entre 2 a 12+ (años). Sin embargo, las estimaciones del modelo tienen su origen en la edad cero sobre la base de una condición inicial estado estable. La dinámica esta modelada por un reclutamiento tipo Beverton y Holt.
+
+## Plataforma de modelación
+
+Los modelos implementados fueron configurados utilizando Stock Synthesis (SS3 de aquí en mas)(<https://vlab.noaa.gov/web/stock-synthesis>) con la versión mas actualizada (V.3.30.18). SS3 es un modelo de evaluación de stock edad y talla estrucuturado, en la clase de modelos denominados "Modelo de análisis integrado de evaluación de stock". SS3 tiene un sub-modelo poblacional de stock que simula crecimiento, madurez, fecundidad, reclutamiento, movimiento, y procesos de mortalidad, y sub-modelos de observation y valores esperados para diferentes tipos de datos. El modelo es codificado en `C++` con parámetros de estimación activados por diferenciación automática (ADMB) [@Fournier2012; @Methot2013]. El análisis de resultados y salidas emplea herramientas de R e interfase gráfica de la librería *r4ss* (<https://github.com/r4ss/r4ss>) [@Taylor2019].
+
+## Parámetros biológicos
+
+La Tabla \ref{t1} identifica los parametros de información disponbles que provienen del reporte técnico de @Demer2020. En este informe no se realizó una revisión de los parámetros biologicos disponibles, dado que se utilizaron los de las evaluaciones previas para ser consistentes con los informes anteeriores de evaluación y la información utilizada.
+
+\pagebreak
+
+```{r  warning=F, message=F, include=FALSE}
+start <- r4ss::SS_readstarter(file = file.path(dir3, "starter.SS"), 
+                              verbose = FALSE)
+dat <- r4ss::SS_readdat(file = file.path(dir3, start$datfile),
+                        verbose = FALSE)
+ctl <- r4ss::SS_readctl(file = file.path(dir3, start$ctlfile),
+                        verbose = FALSE,
+                        use_datlist = TRUE, datlist = dat)
+
+```
+
+```{r echo=FALSE}
+parbio <-ctl$MG_parms[,1:8]
+
+kbl(parbio, booktabs = T,format = "latex",
+    caption = "\\label{t1}Parámetros biológicos") %>%
+    kable_styling(latex_options = c("striped",
+                                  "condensed","scale_down"),
+                full_width = FALSE,font_size=8)
+```
+
+El reclutamiento fue modelado mediante una curva logística de Beverton y Holt, con los parámetros indicados en la Tabla \ref{t2}.
+
+```{r}
+step <- ctl$SR_parms[1:2,1:7]
+
+kbl(step, booktabs = T,format = "latex",
+    caption = "\\label{t2}Parámetros Relación S-R") %>%
+      kable_styling(latex_options = "HOLD_position")
+```
+
+## Datos utilizados
+
+a.  Desembarque industrial y artesanal del período (1994-2021) separados por flota, provenientes de las estadisticas oficiales de Sernapesca (Subsecretaria de Pesca, 2021). Al disponer de los desembarques oficiales por flota, es posible segregar información oficial por flotas, siendo factible a la vez disponer de datos oficiales (reportados). Cabe señalar que en esta pesquería aun no se realizan procesos de corrección de desembarques.
+
+b.  Información del Programa de Seguimiento de la pesquería de pesquerías demersales del Instituto de Fomento Pesquero.
+
+La información proviene del monitoreo artesanal e industrial en la zona centro-sur de Chile, en donde se destacan dos flotas de pesca, la artesanal de enmalle y artesanal de espinel, siendo esta ultima la mas importante en terminos de registros e historial.
+
+En ambos casos se obtienen datos de: i) estructura de tamaños, ii) composiciones por edad, iii) parámetros de crecimiento y iv) peso anuales por edad/talla y años.
+
+Por otro lado, los rendimientos de pesca de cada flota fueron estandarizados mediante modelos lineales generalizados.
+
+c.  En el caso de la pesquería industrial, el monitoreo permitió obtener composición de abundancia a la edad entre los años 2017 y 2021.
+
+El esquema de evaluación presentado considera una modelación secuencial por flotas artesanal e industrial. La flota con mayor historial pesquero de acuerdo a los analisis es la flota artesanal de espinel, que para este caso se determinara como modelo base de evaluuación.
+
+La evaluación de stock en SS3 de *Brama australis* en la zona Centro Sur de Chile se realiza de manera jerarquica integrando la información relativa a las tres flotas que operan en el recurso. A saber;
+
+-   Espinel Artesanal (1)
+-   Enmalle Artesanal (2)
+-   Industrial (3)
+
+En la Tabla 3. se enumeran y describen los escenarios de modelación en función de las flotas disponibles.
+
+| Escenario | Descripción                                      |
+|:---------:|:-------------------------------------------------|
+|    s1     | Todas las flotas                                 |
+|    s1a    | Todas las flotas (comps Edades Industrial)       |
+|    s1b    | Modelo todas las flotas pero solo Indice Espinel |
+|    s2     | Flota Artesanal Enmalle                          |
+|    s3     | Flotas artesanales (Espinel y Enmalle)           |
+|    s4     | Flota Artesanal Espinel (Modelo Base)            |
+|    s5     | Indice Biomasa Zhou [@Zhou2009; @Zhou2013]       |
+
+: Escenarios y descripción de los modelos de evaluación de Reineta 2022 {tbl-colwidths="\[15,50\]"}
+
+Para avanzar en la implenteación metodológica, se establece con fines comparativos modelo por flotas artesanales, donde un modelo utiliza la información de enmalle artesanal, para luego sumar la flota enmalle artesanal, para terminar incorporando la información de la flota industrial. Tambmien se ehecutan las flotas por separado (Tabla 1).
+
+## Modelos reportados
+
+Cabe mencionar que el modelo utilizado para la toma de decisiones esta basado en un modelo de producción basado en datos de captura con uso de supuestos asociados a los niveles de agotamiento [@Demer2020; @Zhou2009; @Zhou2013]. Por otro lado, se ha avanzado en la implementación de modelos integrados utilizando datos de la flota artesanal de enmalle [@Demer2020; @brama2022].
+
+Al momento de la elaboración de este informe, existen tres modelos implementados a la fecha, a saber el *s2*, *s3*, *s4* y *s5*. Estos modelos seran presentados a continuación en referencia las piezas de información disponibles y salidas de la evaluación.
+
+### Datos utilizados en `s1`
+```{r eval= F, message=FALSE, warning=FALSE, include=FALSE}
+### s1 ( Todas las flotas )
+setwd("~/IFOP/CBA/REINETA/Brama_2022/s1")
+#dir()
+system('./ss_osx') 
+#r4ss::run(dirvec = dir1, model = './ss_osx', 
+#                    skipfinished = F)
+```
+
+```{r  message=FALSE, warning=FALSE, include=FALSE}
+base.model1 <- SS_output(dir=dir1,covar=T,forecast=F)
+```
+
+
+```{r echo=FALSE, fig.height=4,fig.width=5, fig.pos="H", fig.cap=" Datos utilizados en s1"}
+SSplotData(base.model1, subplot = 2, 
+           fleetnames = c("Espinel", "Enmalle", "Industrial"),
+           fleetcol = c(2,5, "blue"))
+```
+
+
+```{r eval= F, message=FALSE, warning=FALSE, include=FALSE}
+### s1 ( Todas las flotas indice espinel )
+r4ss::run_SS_models(dirvec = dir1b, model = './ss_osx', 
+                    skipfinished = FALSE)
+```
+
+```{r eval= F, message=FALSE, warning=FALSE, include=FALSE}
+base.model1b <- SS_output(dir=dir1b,covar=F,forecast=F)
+```
+
+```{r echo=FALSE, eval= F, fig.height=10,fig.width=6,fig.align="center", fig.cap="Distribución"}
+SSplotData(base.model1b, subplot = 2, 
+           fleetnames = c("Espinel", "Enmalle", "Industrial"),
+           fleetcol = c(2,5, 6))
+```
+
+
+### Datos utilizados en `s2`
+
+```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
+### s2 (Flota Artesanal Enmalle)
+setwd("~/IFOP/CBA/REINETA/Brama_2022/s2")
+#dir()
+system('./ss_osx') 
+#(Este modelo está por implemetar. Cambiar versión de SS3.)
+#r4ss::run_SS_models(dirvec = dir2, model = './ss_osx', 
+#                    skipfinished = FALSE)
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+base.model2 <- SS_output(dir=dir2,covar=T,forecast=T)
+```
+
+
+
+El modelo *s2* contiene los datos de enmalle de la flota artesanal de reineta que se presentan a continuación en la Figura 2.
+
+```{r fig.height=4,fig.width=5,fig.cap="\\label{fig:fig} Datos utilizados en s2",fig.pos="H"}
+
+SSplotData(base.model2, subplot = 1, 
+           fleetnames = c("Enmalle"),
+           fleetcol = c(5))
+```
+
+```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
+### s3 (Flotas artesanales (Espinel y Enmalle))
+r4ss::run_SS_models(dirvec = dir3, model = './ss_osx', 
+                    skipfinished = FALSE)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+base.model3 <- SS_output(dir=dir3,covar=F,forecast=F)
+
+```
+
+### Datos utilizados en `s3`
+
+El modelo *s2* contiene los datos de enmalle y espinel de la flota artesanal de reineta que se presentan a continuación en la Figura 2.
+
+```{r echo= FALSE, fig.height=4,fig.width=5,fig.align="center", fig.cap="\\label{fig:fig} Datos utilizados en s3 para reineta", fig.pos="H"}
+SSplotData(base.model3, subplot = 1, 
+           fleetnames = c("Espinel", "Enmalle"),
+           fleetcol = c(2,5))
+```
+
+
+```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
+### s4 (Flota Artesanal Espinel (Modelo Base)
+r4ss::run_SS_models(dirvec = dir4, model = './ss_osx', 
+                    skipfinished = FALSE)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+base.model4 <- SS_output(dir=dir4,covar=F,forecast=F)
+
+```
+
+### Datos utilizados en `s4`
+
+El modelo *s4* contiene los datos de espinel de la flota artesanal de reineta que se presentan a continuación en la Figura 4.
+
+```{r fig.height=4,fig.width=5,fig.align="center", fig.cap="Datos utilizados en s4 para reineta", fig.pos="H"}
+SSplotData(base.model4, subplot = 1, 
+           fleetnames = "Espinel",
+           fleetcol = 2)
+```
+
+
+```{r eval= F,message=FALSE, warning=FALSE, include=FALSE}
+### s5 (Indice Biomasa Zhou [@Zhou2009])
+#(Modelo aún no implementado)
+r4ss::run_SS_models(dirvec = dir5, model = './ss_osx', 
+                    skipfinished = FALSE)
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+base.model5 <- SS_output(dir=dir5,covar=F)
+```
+
+### Datos utilizados en `s5`
+
+El modelo *s5* contiene los datos de espinel de la flota artesanal de reineta y un indice de biomasa proveniente del modelo de producción de @Zhou2009.
+
+```{r fig.height=4,fig.width=5,fig.align="center", fig.cap="Datos utilizados en s4 para reineta", fig.pos="H"}
+SSplotData(base.model5, subplot = 1, 
+           fleetnames = c("Espinel", "Biomasa Zhou"),
+           fleetcol = c(2,"green"))
+```
+
+
+### Desembarques
+
+
+```{r include=FALSE}
+start <- r4ss::SS_readstarter(file = file.path(dir1, "starter.SS"), 
+                              verbose = FALSE)
+dat <- r4ss::SS_readdat(file = file.path(dir1, start$datfile),
+                        verbose = FALSE)
+#ctl <- r4ss::SS_readctl(file = file.path(dir1, start$ctlfile),
+#                        verbose = FALSE,
+#                        use_datlist = TRUE, datlist = dat)
+
+```
+
+Los desembarques utilizados para cada una de las flotas que generan remoción en el recurso reineta, a saber; espinel, enmalle e industrial (Figura 6).
+
+```{r echo=FALSE, fig.pos="H", fig.height=3,fig.width=7, fig.cap= "\\label{F2}Desembarques de merluza común por flota"}
+
+flotas <- c(`1` = "Enmalle",
+                    `2` = "Espinel",
+                    `3` = "Industrial")
+cap <-dat$catch
+cap1 <- ggplot(cap, aes(y=catch, x=year, fill=fleet)) +
+  geom_bar(stat = 'identity', alpha=0.8) +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 2))+
+  scale_fill_viridis(discrete=F)+
+  facet_wrap(.~fleet, labeller = as_labeller(flotas))+
+  theme(legend.position="none")+
+  ylab('Landings (t.)')+
+  xlab('')+
+  ggtitle('')
+cap1
+```
+
+### Rendimiento de pesca (CPUE)
+
+Utilizando modelos lineales generalizados (GLM), se realiza la estandarización de los rendimientos de pesca para la flota artesanal e industrial que operó sobre reineta, utilizando la información proveniente del monitoreo de las pesquerías de espinel, enmalle e industrial entre los años 1998 y 2021. Se utilizan las bases de datos del Programa de seguimiento de las pesquerías demersal centro-sur (bitácoras de pesca IFOP). La base de datos correspondiente a espinel, ya que es la más extensa y con un mayor número de registros anuales. Este año se ha incorporado el análisis incorporando la red de enmalle como otro arte de pesca y la flota industrial que dirige sus lances de pesca a reineta.
+
+En los modelos lineales generalizados (GLM; @McCulloch2001), la CPUE es predicha como una combinación lineal de variables explicatorias y el principal objetivo es estimar el efecto anual. Existen varias alternativas para modelar las tasas de captura (CPUE) a través de un GLM y su uso depende de las características de la variable a modelar. Pudiendo considerar en este sentido, los modelos Log-normal y Gamma.
+
+La elección del modelo que describe de mejor manera la variabilidad en las tasas de capturas, se basó en los supuestos de distribución de la variable respuesta y sus residuos y en el porcentaje total de varianza explicada en cada caso.
+
+Las tablas 3, 4 y 5 muestran las series de rendimientos estandarizado definidas por las pesquerías de Enmalle y Espinel para reineta.
+
+```{r echo=F}
+dat <- r4ss::SS_readdat(file = file.path(dir1, start$datfile),
+                        verbose = FALSE)
+cpues3enesin <-dat$CPUE
+cpues3es<-dat$CPUE[1:24,]
+cpues3en<-dat$CPUE[25:40,]
+cpues3in<-dat$CPUE[41:51,]
+
+
+kbl(cpues3es, booktabs = T,format = "latex",
+    caption = "CPUE Espinel")  %>% 
+    kable_styling(latex_options = "HOLD_position")
+
+kbl(cpues3en, booktabs = T,format = "latex",
+    caption = "CPUE Enmalle") %>% 
+    kable_styling(latex_options = "HOLD_position")
+
+kbl(cpues3in, booktabs = T,format = "latex",
+    caption = "CPUE Industrial") %>% 
+    kable_styling(latex_options = "HOLD_position")
+```
+
+Por otro lado, se presentan los graficos que señalan las tendiencias de los rendimientos (Figura 5).
+
+```{r echo=FALSE, fig.height=3, fig.width=8, fig.cap="Tendencia de Rendinientos estandarizados para Reineta utilizados en el s5 para Espinel (1), Enmalle (2) e Industrial (3)", fig.pos="H"}
+
+cpues3 <- ggplot(cpues3enesin, aes(y=obs, x=year)) +
+  geom_point(stat = 'identity', color=2,alpha=.9, size=2) +
+  stat_smooth(colour='#253494',
+              method="lm")+
+  scale_x_continuous(breaks = seq(from = 1996, to = 2021, by = 5))+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 2))+
+  facet_wrap(~index)+
+  ylab('CPUE (t./hr haul)')+
+  xlab('')+
+  ggtitle('')
+cpues3
+
+```
+
+### Indice de Biomasa  [@Zhou2013]
+
+Considerando la evaluación de stock reportada en @Demer2020 y @brama2022, en este trabajo se añadió un indice de abundancia indirecto basado en el metodo de  @Zhou2013. Es importante señalar que este tipo de métodos suponen que las capturas del recurso son verdaderas y que la especie en estudio constituye un stock cerrado en el área de estudio. Es decir, no hay inmigración o emigración. A pesar de dichas limitaciones, este método fue utilizado para estimar los Puntos Biológicos de Referencia (PBR), estatus y cálculo de CBA para el año 2021.
+
+Este modelo tiene estimaciones de biomasa a través de la serie analizada, las cuales fueron utilizadas en esta modelación en desmedro de las tendencias de los rendimientos de pesca. A continuación, el indice estimado.
+
+```{r include=FALSE}
+dat5 <- r4ss::SS_readdat(file = file.path(dir5, start$datfile),
+                        verbose = FALSE)
+```
+
+Los desembarques en la Figura \ref{F2}
+
+```{r echo=FALSE, fig.pos='H', fig.height=4,fig.width=4, fig.cap= "\\label{F2}Biomasa Zhou (2009)"}
+
+sb <- ggplot(dat5$CPUE[1:28,], aes(y=obs, x=year)) +
+  geom_point(stat = 'identity', color=3,alpha=.9, size=2) +
+  stat_smooth(colour=3)+
+  scale_x_continuous(breaks = seq(from = 1996, to = 2021, by = 5))+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 2))+
+  ylab('Biomasa (t.)')+
+  xlab('')+
+  ggtitle('')+
+  ylim(0,180000)
+sb
+```
+
+
+\pagebreak
+
+# RESULTADOS
+
+Respecto a los valores y parámetros biológicos modelados, los siguientes gráficos identifican los estimadores puntuales del recurso en *s2*, *s3* , *s4* y  *s5*. En el primer analisis visualizamos el modelo de crecimkento individual del recurso en cada modelo.
+
+::: {layout-ncol="3"}
+
+```{r fig.height=4,fig.width=4, fig.cap="\\label{fig:fig} Curva de crecimiento en s1", fig.pos="H"}
+SSplotBiology(base.model1, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
+    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
+    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
+    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
+ )
+```
+
+```{r fig.height=4,fig.width=4, fig.cap="\\label{fig:fig} Curva de crecimiento en s2", fig.pos="H"}
+SSplotBiology(base.model2, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
+    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
+    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
+    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
+ )
+```
+
+```{r fig.height=4,fig.width=4, fig.cap="\\label{fig:fig}curva de crecimiento en s3", fig.pos="H"}
+SSplotBiology(base.model3, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
+    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
+    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
+    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
+ )
+```
+
+```{r fig.height=4,fig.width=4, fig.cap="\\label{fig:fig}curva de crecimiento en s4", fig.pos="H", }
+SSplotBiology(base.model4, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
+    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
+    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
+    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
+ )
+```
+
+```{r fig.height=4,fig.width=4, fig.cap="\\label{fig:fig}curva de crecimiento en s5", fig.pos="H"}
+SSplotBiology(base.model5, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
+    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
+    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
+    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
+ )
+```
+
+:::
+
+\pagebreak 
+## Ajustes
+
+Una de las mas básicas formas de identificar el desempeño de los modelos es mirando los ajustes asociados a la estimación de parámetros y variables. En primer lugar observamos los ajustes a las tallas de cada escenario.
+
+```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s1", fig.pos="H"}
+SSplotComps(base.model1, subplots = 1,
+            fleetnames = c("Espinel", "Enmalle", "Industrial"),
+            sizemethod = 2,
+            smooth = TRUE)
+```
+
+```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s2", fig.pos="H"}
+SSplotComps(base.model2, subplots = 1,
+            fleetnames = c("Enmalle"),
+            sizemethod = 2,
+            smooth = TRUE)
+```
+
+```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s3", fig.pos="H"}
+SSplotComps(base.model3, subplots = 1,
+            fleetnames = c("Espinel", "Enmalle"),
+            sizemethod = 2,
+            smooth = TRUE)
+```
+
+```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s4", fig.pos="H"}
+SSplotComps(base.model4, subplots = 1,
+            fleetnames = c("Espinel"),
+            sizemethod = 2,
+            smooth = TRUE)
+```
+
+```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s5", fig.pos="H"}
+SSplotComps(base.model5, subplots = 1,
+            fleetnames = c("Espinel"),
+            sizemethod = 2,
+            smooth = TRUE)
+```
+
+\pagebreak
+## Biomasa desovante
+
+La estimación de biomasa total por modelo da cuenta de las diferencias entre modelos. A continuación se grafican las salida de las biomasas de los modelos *s1*, *s2*, *s3*, *s4* y *s5*.
+
+::: {layout-ncol="3"}
+
+```{r fig.height=3,fig.width=3, fig.cap="Biomasa total s1", fig.pos="H"}
+SSplotTimeseries(base.model1, subplot = 1)
+```
+
+```{r fig.height=3,fig.width=3, fig.cap="Biomasa total s2", fig.pos="H"}
+SSplotTimeseries(base.model2, subplot = 1)
+```
+
+```{r fig.height=3,fig.width=3, fig.cap="Biomasa total s3", fig.pos="H"}
+SSplotTimeseries(base.model3, subplot = 1)
+```
+
+
+```{r fig.height=3,fig.width=3, fig.cap="Biomasa total s4", fig.pos="H"}
+SSplotTimeseries(base.model4, subplot = 1)
+```
+
+
+```{r fig.height=3,fig.width=3, fig.cap="Biomasa total s5", fig.pos="H"}
+SSplotTimeseries(base.model5, subplot = 1)
+```
+
+:::
+
+\pagebreak 
+## Reclutamiento
+
+Las siguientes figuyras muestran los desvios del reclutamiento para los escenarios *s1*, *s2*, *s3*, *s4* y *s5*.
+
+::: {layout-ncol="3"}
+```{r fig.height=3,fig.width=3, fig.cap=" Dev recruits s2", fig.pos="H"}
+SSplotRecdevs(base.model1, subplot = 2)
+```
+
+
+```{r fig.height=3,fig.width=3, fig.cap=" Dev recruits s2", fig.pos="H"}
+SSplotRecdevs(base.model2, subplot = 2)
+```
+
+```{r fig.height=3,fig.width=3, fig.cap=" Dev recruits s3", fig.pos="H"}
+SSplotRecdevs(base.model3, subplot = 2)
+```
+
+
+```{r fig.height=3,fig.width=3, fig.cap=" Dev recruits s4", fig.pos="H"}
+SSplotRecdevs(base.model4, subplot = 2)
+```
+
+
+```{r fig.height=3,fig.width=3, fig.cap=" Dev recruits s5", fig.pos="H"}
+SSplotRecdevs(base.model5, subplot = 2)
+```
+:::
+
+\pagebreak
+
+## Mortalidad por pesca
+
+La mortalidad por pesca se identifica en las siguientes figuras.
+
+::: {layout-ncol="3"}
+```{r fig.height=3,fig.width=3, fig.cap=" Mortalidad pot Pesca s1", fig.pos="H"}
+SSplotSummaryF(base.model1)
+```
+
+```{r fig.height=3,fig.width=3, fig.cap=" Mortalidad pot Pesca s2", fig.pos="H"}
+SSplotSummaryF(base.model2)
+```
+
+```{r fig.height=3,fig.width=3, fig.cap=" Mortalidad pot Pesca s3", fig.pos="H"}
+SSplotSummaryF(base.model3)
+```
+
+```{r fig.height=3,fig.width=3, fig.cap=" Mortalidad pot Pesca s4", fig.pos="H"}
+SSplotSummaryF(base.model4)
+```
+
+```{r fig.height=3,fig.width=3, fig.cap=" Mortalidad pot Pesca s5", fig.pos="H"}
+SSplotSummaryF(base.model5)
+```
+:::
+
+\pagebreak
+
+
+## Retrospectivo
+
+Los análisis retrospectivo, dan cuenta de diferencias de estimación (sub - sobreestimación) en los patrones entre modelos evaluados. 
+
+```{r warning = FALSE, message = FALSE, echo=FALSE}
+mydir1 <- dir1
+
+SS_doRetro(
+  masterdir = mydir1,
+  oldsubdir = "",
+  newsubdir = "retrospectives",
+  years = 0:-5
+)
+```
+
+```{r eval=F, include=F , message=F}
+mydir1 <- dir1
+retroModels <- SSgetoutput(
+  dirvec = file.path(mydir1, "retrospectives", paste("retro", 0:-5, sep = ""))
+)
+retroSummary <- SSsummarize(retroModels)
+endyrvec <- retroSummary[["endyrs"]] + 0:-5
+
+
+dc1='~/IFOP/CBA/REINETA/Brama_2022/s1/retrospectives'
+SSplotComparisons(retroSummary,
+  endyrvec = endyrvec,
+  subplots = 1:4,
+  legendlabels = paste("Data", 0:-5, "years"),
+  print = TRUE,
+  png = TRUE,
+  plot=TRUE,
+  models = "all",
+  plotdir = dc1
+)
+
+
+```
+
+::: {layout-ncol="2"}
+![Retro BRatio s1](~/IFOP/CBA/REINETA/Brama_2022a/s1/retrospectives/compare4_Bratio_uncertainty.png)
+
+![Retro SSB s1](~/IFOP/CBA/REINETA/Brama_2022/s1/retrospectives/compare2_spawnbio_uncertainty.png)
+:::
+
+```{r eval=F}
+mydir2 <- dir2
+
+SS_doRetro(
+  masterdir = mydir2,
+  oldsubdir = "",
+  newsubdir = "retrospectives",
+  years = 0:-5
+)
+
+
+```
+
+```{r eval=F, include=F , message=F}
+mydir <- dir2
+retroModels <- SSgetoutput(
+  dirvec = file.path(dir2, "retrospectives", paste("retro", 0:-5, sep = "", save.list=T))
+)
+retroSummary <- SSsummarize(retroModels)
+endyrvec <- retroSummary[["endyrs"]] + 0:-5
+
+dc2='~/IFOP/CBA/REINETA/Brama_2022/s2/retrospectives'
+SSplotComparisons(retroSummary,
+  endyrvec = endyrvec,
+  subplots = 1:4,
+  legendlabels = paste("Data", 0:-5, "years"),
+  print = TRUE,
+  png = TRUE,
+  plot=TRUE,
+  models = "all",
+  plotdir = dc2
+)
+
+
+```
+
+::: {layout-ncol="2"}
+![Retro BRatio s2](~/IFOP/CBA/REINETA/Brama_2022/s2/retrospectives/compare4_Bratio_uncertainty.png)
+
+![Retro SSB s2](~/IFOP/CBA/REINETA/Brama_2022/s2/retrospectives/compare2_spawnbio_uncertainty.png)
+:::
+
+```{r eval=F, message=F}
+mydir3 <- dir3
+
+SS_doRetro(
+  masterdir = mydir3,
+  oldsubdir = "",
+  newsubdir = "retrospectives",
+  years = 0:-5
+)
+
+
+```
+
+```{r eval=F, include=F , message=F}
+mydir3 <- dir3
+retroModels <- SSgetoutput(
+  dirvec = file.path(mydir3, "retrospectives", paste("retro", 0:-5, sep = ""))
+)
+retroSummary <- SSsummarize(retroModels)
+endyrvec <- retroSummary[["endyrs"]] + 0:-5
+
+dc3='~/IFOP/CBA/REINETA/Brama_2022/s3/retrospectives'
+SSplotComparisons(retroSummary,
+  endyrvec = endyrvec,
+  subplots = 1:4,
+  legendlabels = paste("Data", 0:-5, "years"),plot=TRUE, 
+print = TRUE, png = TRUE, models = "all",plotdir = dc3
+)
+
+
+```
+
+::: {layout-ncol="2"}
+![Retro BRatio s3](~/IFOP/CBA/REINETA/Brama_2022/s3/retrospectives/compare4_Bratio_uncertainty.png)
+
+![Retro SSB s3](~/IFOP/CBA/REINETA/Brama_2022/s3/retrospectives/compare2_spawnbio_uncertainty.png)
+:::
+
+```{r eval=F}
+mydir4 <- dir4
+
+SS_doRetro(
+  masterdir = mydir4,
+  oldsubdir = "",
+  newsubdir = "retrospectives",
+  years = 0:-5
+)
+
+
+```
+
+```{r eval=F, include=F , message=F}
+retroModels <- SSgetoutput(
+  dirvec = file.path(mydir4, "retrospectives", paste("retro", 0:-5, sep = ""))
+)
+retroSummary <- SSsummarize(retroModels)
+endyrvec <- retroSummary[["endyrs"]] + 0:-5
+
+dc4='~/IFOP/CBA/REINETA/Brama_2022/s4/retrospectives'
+SSplotComparisons(retroSummary,
+  endyrvec = endyrvec,
+  subplots = 1:4,
+  legendlabels = paste("Data", 0:-5, "years"),
+print = TRUE, png = TRUE, models = "all",plotdir = dc4
+)
+
+
+```
+
+::: {layout-ncol="2"}
+![Retro BRatio s4](~/IFOP/CBA/REINETA/Brama_2022/s4/retrospectives/compare4_Bratio_uncertainty.png)
+
+![Retro SSB s4](~/IFOP/CBA/REINETA/Brama_2022/s4/retrospectives/compare2_spawnbio_uncertainty.png)
+:::
+
+```{r eval=F}
+mydir5 <- dir5
+
+SS_doRetro(
+  masterdir = mydir5,
+  oldsubdir = "",
+  newsubdir = "retrospectives",
+  years = 0:-5
+)
+
+
+```
+
+```{r eval=F, include=F , message=F}
+retroModels <- SSgetoutput(
+  dirvec = file.path(mydir5, "retrospectives", paste("retro", 0:-5, sep = ""))
+)
+retroSummary <- SSsummarize(retroModels)
+endyrvec <- retroSummary[["endyrs"]] + 0:-5
+
+dc5='~/IFOP/CBA/REINETA/Brama_2022/s5/retrospectives'
+SSplotComparisons(retroSummary,
+  endyrvec = endyrvec,
+  subplots = 1:4,
+  legendlabels = paste("Data", 0:-5, "years"),
+print = TRUE, png = TRUE, models = "all",plotdir = dc5
+)
+
+
+```
+
+::: {layout-ncol="2"}
+![Retro BRatio s5](~/IFOP/CBA/REINETA/Brama_2022/s5/retrospectives/compare4_Bratio_uncertainty.png)
+
+![Retro SSB s5](~/IFOP/CBA/REINETA/Brama_2022/s5/retrospectives/compare2_spawnbio_uncertainty.png)
+:::
+
+\pagebreak
+
+## Comparación
+
+La siguiente Tabla muestra los componentes de la probabilidad asociados a la estimación de cada escenario testeado en este documento. A su vez se identifican los parámetros estimados por cada assessment. Tambien podemos identificar las diferencias entre modelos en las principales variables poblacionales estimadas para lostres escenarios (*s2*, *s3*, *s4* y *s5*)
+
+```{r message=F}
+mod.sum <- SSsummarize(list( base.model2, base.model3, base.model4, base.model5))
+
+```
+
+```{r eval=F, message=F}
+SSplotComparisons(mod.sum,
+                legendlabels=c( "s2", "s3", "s4", "s5"), 
+                print = TRUE, 
+                plot=TRUE,
+                png = TRUE, models = "all",
+                plotdir = diri)
+```
+
+::: {layout-ncol="2"}
+![SSB Comparado](images/compare2_spawnbio_uncertainty.png)
+
+![BR Comparado](images/compare4_Bratio_uncertainty.png)
+
+![SPR Comparado](images/compare6_SPRratio_uncertainty.png)
+
+![FComparado](images/compare8_Fvalue_uncertainty.png)
+
+
+![Reclutas Comparado](images/compare10_recruits_uncertainty.png)
+
+![Desvios R Comparado](images/compare12_recdevs_uncertainty.png)
+:::
+
+```{r include=F, warning=F, message=F}
+# Table of comparisons
+comp <- SStableComparisons(mod.sum, models = "all", likenames = c("TOTAL", "Survey", "Length_comp", "Age_comp", "priors",
+  "Size_at_age"), names = c("Recr_Virgin", "R0", "steep", "NatM",
+  "L_at_Amax", "VonBert_K", "SSB_Virg", "Bratio_2021", "SPRratio_2021"),
+  digits = NULL, modelnames = c("s1", "s2","s3","s4","s5"))
+```
+
+```{r}
+kbl(comp, booktabs = T,format = "latex",
+    caption = "Comparacion likelihood y parámetros s1, s2, s3, s4 y s5")  %>% 
+    kable_styling(latex_options = "HOLD_position")
+```
+
+\pagebreak
+
+# DISCUSIÓN
+
+## Asociadas a la implementación metodológica
+
+La implementación metodologica de la evaluación de stock mediante un modelo integrado de reineta para la zona Centro Sur de chile presenta multiples desafíos, y que algunos componentes de este proyecto fueron atendidos en este documento. El uso de plataformas de evaluación de stock como SS3 [@Methot2013] ha permitido explorar otros escanarios de la naturaleza asociada a este recurso, dinámica poblacional y pesquería, en este caso, incorporar nuevas fuentes y piezas de datos disponibles los cuales dieron paso a los resultados presentados.
+
+## Datos y piezas de información disponibles
+
+Este trabajo de implementación metodológica fue posible dado el trabajo de análisis de datos disponibles de las tres flotas que operan sobre este recurso, a saber: espinel, enmalle e industrial. Este trabajo ha sido desarrollado por el Grupo de Trabajo de Demersales del Departamento de Evaluación de Recursos de IFOP. Los principales avances tienen relación con obtención de rendimientos estandarizados y estructuras de tallas asociadas a cada flota. Estos datos presentan un avance en la información disponible para la implentación de un modelo integrado con dinamica en edades como se plantea en este documento.
+
+## Asociadas a la evaluación de stock
+
+Respecto a los resultados de la evaluación de stock, es posible identificar la consistencia en la estimación de los modelos *s2* y *s3*, es decir, los modelos que utilizaron las flotas de enmalle y espinel por separado respectivamente. Por otro lado, el modelo que combinó todas las flotas (*s1*) y el que contenia información de las flotas de enmalle y espinel (*s3*) fueron los que tuvieron el el desempeño mas bajo de los tres modelos presentados.
+
+## Trabajo en progreso
+
+Este trabajo presenta componentes que aun deben ser discutidos y analizados de manera mas extensa. En primer lugar, es necesario parametrizar en el ambito biologico de la especie y de la pesquería los tres modelos analizados. En segundo lugar, se deben terminar de implementar los modelos con la información de la flota industrial, los cuales deben ser integrados a la información disponible de las otras flotas artesanales (modelo *s1* y *s1a*). Por último, se debe avanzar en un modelo que utilice otro indicador de abundancia alternativo al de la CPUE. En este caso hemos propuesto utilizar las salidas del modelo de producción utilizado para el manejo y que actualmente se presenta en la evaluación [@Zhou2009]
+
+Consideramos que este trabajo se sitúa en el camino correcto para la integración de las piezas de información disponible en esta pesquería, sin embargo, la implenteación y mejoras presentadas en este documento deben ser analizadas a la luz de un trabajo que no ha terminado y en progreso.
+
+\pagebreak
+
+# REFERENCIAS
