@@ -51,7 +51,7 @@ library(ggthemes)
 library(kableExtra)
 ```
 
-```{r echo=TRUE}
+```{r}
 # Defino directorios
 diri<-here("images")
 dir1<-here("s1") # Modelo todas las flotas
@@ -98,19 +98,22 @@ Desembarque industrial y artesanal del período (1994-2021) separados por flota,
 Los desembarques utilizados para cada una de las flotas que generan remoción en el recurso reineta, a saber; espinel, enmalle e industrial (Figura 6).
 
 ```{r eval=F, fig.pos="H", fig.cap= "Desembarques de reineta por flota"}
-dat <- SS_readdat(file = file.path(dir7,
-                                   start$datfile),
+dat <- r4ss::SS_readdat(file = file.path(dir7, 
+                                         start$datfile),
                         verbose = FALSE)
 flotas <- c(`2` = "Enmalle",
-                    `1` = "Espinel",
-                    `3` = "Industrial",
+            `1` = "Espinel",
+            `3` = "Industrial",
             `4` = "SPRFMO")
 cap <-dat$catch[2:94,]
 cap1 <- ggplot(cap, aes(y=catch, x=year, fill=fleet)) +
   geom_bar(stat = 'identity', alpha=0.8) +
   theme_few()+
-  theme(axis.text.x = element_text(angle = 90, hjust = 2))+
-  scale_x_continuous(breaks = seq(from = 1994, to = 2022, by = 3))+
+  theme(axis.text.x = element_text(angle = 90, 
+                                   hjust = 2))+
+  scale_x_continuous(breaks = seq(from = 1994,
+                                  to = 2022, 
+                                  by = 3))+
   scale_fill_viridis(discrete=F,
                      option="H")+
   facet_wrap(.~fleet, labeller = as_labeller(flotas),
@@ -135,7 +138,8 @@ La Tabla \ref{t1} identifica los parametros de información disponbles que provi
 \pagebreak
 
 ```{r  warning=F, message=F, include=FALSE}
-start <- r4ss::SS_readstarter(file = file.path(dir1, "starter.SS"), 
+start <- r4ss::SS_readstarter(file = file.path(dir1,
+                                               "starter.SS"), 
                               verbose = FALSE)
 dat <- r4ss::SS_readdat(file = file.path(dir1, start$datfile),
                         verbose = FALSE)
@@ -146,7 +150,7 @@ ctl <- r4ss::SS_readctl(file = file.path(dir1, start$ctlfile),
 ```
 
 ```{r echo=FALSE}
-parbio <-round(ctl$MG_parms[,1:8],2)
+parbio <-round(ctl$MG_parms[,3:4],2)
 
 kbl(parbio, booktabs = T,format = "latex",
     caption = "\\label{t1}Parámetros biológicos") %>%
@@ -158,8 +162,7 @@ kbl(parbio, booktabs = T,format = "latex",
 El reclutamiento fue modelado mediante una curva logística de Beverton y Holt, con los parámetros indicados en la Tabla \ref{t2}.
 
 ```{r}
-step <- ctl$SR_parms[1:2,1:7]
-
+step <- ctl$SR_parms[1:2,3:4]
 kbl(step, booktabs = T,format = "latex",
     caption = "\\label{t2}Parámetros Relación S-R") %>%
       kable_styling(latex_options = "HOLD_position")
@@ -220,12 +223,14 @@ cpues3
 Por primera vez, se incorpora un escenario de modelación que integra las capturas provenientes de la flota industrial que opera fuera de la ZEE. Estos datos fueron provistos por la Pelagic Freezer Trawler Association (PFA) [http://www.pelagicfish.eu/](http://www.pelagicfish.eu/).
 
 El esquema completo de datos y su dimensión temporal son expresados en la figura 7 
-```{r fig.cap="Ajuste Tallas s1", fig.pos="H"}
-
+```{r include=FALSE, message=FALSE}
 base.model7 <- SS_output(dir=dir7,
                         covar=T,
                         forecast=T)
+```
 
+
+```{r fig.cap="Ajuste Tallas s1", fig.width=5}
 SSplotData(base.model7, 
            subplots = 1,
            fleetcol = c('#a6611a','#dfc27d','#80cdc1','#018571'),
@@ -753,11 +758,32 @@ SSplotSummaryF(base.model7,
 \pagebreak
 
 
-## Retrospectivo
+## Diagnostico
+
+### Residuales
+
+```{r}
+
+rt = SSplotRunstest(base.model1, 
+                    add = T,
+                    legendcex = 0.8, 
+                    subplot = "len", 
+                    verbose = F)
+jr = SSplotJABBAres(base.model1, 
+                    add = T, 
+                    legendcex = 0.55, 
+                    legendloc = "bottomright",
+                    subplot = "len",
+                    verbose = F)
+
+rt = SSplotRunstest(base.model1, add = T, indexselect = c(3), legendcex = 0.8, verbose = F)
+jr = SSplotJABBAres(base.model1, add = T, indexselect = c(1, 3:6), legendcex = 0.55, verbose = F)
+```
+
 
 Los análisis retrospectivo, dan cuenta de diferencias de estimación (sub - sobreestimación) en los patrones entre modelos evaluados a través del parámetro de Mho.
 
-## Retro `s1`
+### Retro `s1`
 
 ```{r eval=FALSE, warning = FALSE, message = FALSE}
 retro(dir=dir1, oldsubdir="", 
@@ -784,7 +810,7 @@ SSplotRetro(retroSummary1,
             legend = F,
             verbose=F)
 ```
-## Retro `s2`
+### Retro `s2`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir2, oldsubdir="", 
@@ -811,7 +837,7 @@ SSplotRetro(retroSummary2,
             verbose=F)
 ```
 
-## Retro `s3`
+### Retro `s3`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir3, oldsubdir="", 
@@ -837,7 +863,7 @@ SSplotRetro(retroSummary3,
             legend = T,
             verbose=F)
 ```
-## Retro `s4`
+### Retro `s4`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir4, oldsubdir="", 
@@ -865,7 +891,7 @@ SSplotRetro(retroSummary4,
 SShcbias(retroSummary4,quant="SSB",verbose=F)
 SShcbias(retroSummary4,quant="F",verbose=F)
 ```
-## Retro `s5`
+### Retro `s5`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir5, oldsubdir="", 
@@ -892,7 +918,7 @@ SSplotRetro(retroSummary5,
             verbose=F)
 #SShcbias(retroSummary5,quant="SSB",verbose=F)
 ```
-## Retro `s6`
+### Retro `s6`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir6, oldsubdir="", 
@@ -920,7 +946,7 @@ SSplotRetro(retroSummary6,
 #SShcbias(retroSummary6,quant="SSB",verbose=F)
 #SShcbias(retroSummary6,quant="F",verbose=F)
 ```
-## Retro `s7`
+### Retro `s7`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir7, oldsubdir="", 
@@ -933,8 +959,10 @@ retro(dir=dir7, oldsubdir="",
 
 
 ```{r warning = FALSE, message = FALSE}
-retroModels7 <- SSgetoutput(dirvec=file.path(dir7, "Retrospective",
-                                             paste("retro",0:-5,
+retroModels7 <- SSgetoutput(dirvec=file.path(dir7,
+                                             "Retrospective",
+                                             paste("retro",
+                                                   0:-5,
                                                    sep="")))
 retroSummary7 <- SSsummarize(retroModels7)
 endyrvec <- retroSummary7$endyrs + 0:-5
@@ -976,7 +1004,8 @@ SSplotComparisons(mod.sum,
                 print = TRUE, 
                 plot=TRUE,
                 png = TRUE, models = "all",
-                plotdir = diri)
+                plotdir = diri,
+                col=c('#edf8fb','#ccece6','#99d8c9','#66c2a4','#41ae76','#238b45','#005824'))
 ```
 
 
@@ -1000,7 +1029,7 @@ comp <- SStableComparisons(mod.sum,
                                      "SSB_Virg",
                                      "Bratio_2022", 
                                      "SPRratio_2022"),
-  digits = NULL, modelnames = c("s1",
+                           modelnames = c("s1",
                                 "s2",
                                 "s3",
                                 "s4",
