@@ -32,19 +32,13 @@ header-includes:
 
 \pagebreak
 
-```{r, setup, echo=FALSE,  include=FALSE, }
+```{r, setup, echo=FALSE}
 knitr::opts_chunk$set(warning = FALSE, 
                       message = FALSE,
                       echo=FALSE)
 ```
 
 ```{r eval=TRUE}
-# en caso no se tengan las dependencias
-# install.packages("devtools")
-# devtools::install_github("r4ss/r4ss", ref="development")
-# install.packages("caTools")
-# library("caTools")
-# # install.packages("r4ss")
 library(r4ss)
 library(here)
 #remotes::install_github("PIFSCstockassessments/ss3diags")
@@ -53,27 +47,29 @@ library(ss3sim) # evaluación de sesgo
 library(kableExtra)
 library(tidyverse)
 library(viridis)
+library(ggthemes)
+library(kableExtra)
 ```
 
-```{r echo=FALSE}
+```{r echo=TRUE}
 # Defino directorios
 diri<-here("images")
 dir1<-here("s1") # Modelo todas las flotas
-dir2<-here("s2") # Flota Artesanal Enmalle 
-dir3<-here("s3") # Flotas artesanales (Espinel y Enmalle)
-dir4<-here("s4") # Flota Artesanal Espinel (Modelo Base)
-dir5<-here("s5") # Indice Biomasa Zhou [@Zhou2009]
-dir6<-here("s6") # Version 3.30.21
-dir7<-here("s7") # Version 3.30.21
+dir2<-here("s2") # s1 Cv 
+dir3<-here("s3") # s1 cv
+dir4<-here("s4") # s1
+dir5<-here("s5") # s1
+dir6<-here("s6") # s1 h
+dir7<-here("s7") # Con data de SFMPRO
 ```
 
 # ANTECEDENTES
 
 ## Descripción y objetivo del documento
 
-El principal objetivo de este documento es presentar los avances en la implementación del modelo de evaluación integrado para reineta *Brama australis* en la zona centro sur de Chile. Este proceso de evaluación ha sido implententado en Stock Synthesis con la finalidad de integrar distintas piezas de información disponible, analiar desempeño de los modelos y escenarios probados y por último, avanzar en la discusión sobre la utilidad de este tipo de aproximaciones metodologicas y vinculación con la asesoria de IFOP hacia el manejo.
+El principal objetivo de este documento es presentar los avances en la implementación del modelo de evaluación integrado para reineta *Brama australis* en la zona centro sur de Chile. Este proceso de evaluación ha sido implententado en SS3 [@Methot2013] con la finalidad de integrar distintas piezas de información disponible, analizar desempeño de los modelos y escenarios de la naturaleza de los datos y dinámica probados, y por último, avanzar en la discusión sobre la utilidad de este tipo de aproximaciones metodologicas y vinculación con la asesoria de IFOP hacia el CCTRPZCS.
 
-Por lo tanto, este documento contiene el flujo de análisis y modelación de los distintos escenarios de *Brama australis* Reineta como parte de la asesoría técnica que lleva a cabo el IFOP, mediante el Grupo Técnico Demersal y Crustáceos del Departamento de Evaluación de Recursos. 
+Por lo tanto, este documento autoconentido contiene el flujo de análisis y modelación en un modelo integrado alternativo de *Brama australis* Reineta como parte de la asesoría técnica que lleva a cabo el IFOP, a través del Departamento de Evaluación de Recursos (DER). 
 
 \pagebreak
 
@@ -92,29 +88,65 @@ El área de estudio comprende la principal área de operación de la flota arras
 
 El modelo de la dinámica poblacional de reineta, corresponde a un enfoque de evaluación del tipo estadístico con estructura de edad, donde la dinámica progresa avanzando en el tiempo t, y las capturas son causantes de la mortalidad por pesca F, la mortalidad natural es constante M = 0,35. La relación entre la población y las capturas responde a la base de la ecuación de Baranov, y se consideran para el modelo y estimaciones el rango de edad entre 2 a 12+ (años). Sin embargo, las estimaciones del modelo tienen su origen en la edad cero sobre la base de una condición inicial estado estable. La dinámica esta modelada por un reclutamiento tipo Beverton y Holt.
 
-## Plataforma de modelación
 
-Los modelos implementados fueron configurados utilizando Stock Synthesis (SS3 de aquí en mas)(<https://vlab.noaa.gov/web/stock-synthesis>) con la versión mas actualizada (V.3.30.18). SS3 es un modelo de evaluación de stock edad y talla estrucuturado, en la clase de modelos denominados "Modelo de análisis integrado de evaluación de stock". SS3 tiene un sub-modelo poblacional de stock que simula crecimiento, madurez, fecundidad, reclutamiento, movimiento, y procesos de mortalidad, y sub-modelos de observation y valores esperados para diferentes tipos de datos. El modelo es codificado en `C++` con parámetros de estimación activados por diferenciación automática (ADMB) [@Fournier2012; @Methot2013]. El análisis de resultados y salidas emplea herramientas de R e interfase gráfica de la librería *r4ss* (<https://github.com/r4ss/r4ss>) [@Taylor2019].
+## Datos utilizados
 
-## Parámetros biológicos
+### Desembarques
+
+Desembarque industrial y artesanal del período (1994-2021) separados por flota, provenientes de las estadisticas oficiales de Sernapesca (Subsecretaria de Pesca, 2021). Al disponer de los desembarques oficiales por flota, es posible segregar información oficial por flotas, siendo factible a la vez disponer de datos oficiales (reportados). Cabe señalar que en esta pesquería aun no se realizan procesos de corrección de desembarques.
+
+Los desembarques utilizados para cada una de las flotas que generan remoción en el recurso reineta, a saber; espinel, enmalle e industrial (Figura 6).
+
+```{r eval=F, fig.pos="H", fig.cap= "Desembarques de reineta por flota"}
+dat <- SS_readdat(file = file.path(dir7,
+                                   start$datfile),
+                        verbose = FALSE)
+flotas <- c(`2` = "Enmalle",
+                    `1` = "Espinel",
+                    `3` = "Industrial",
+            `4` = "SPRFMO")
+cap <-dat$catch[2:94,]
+cap1 <- ggplot(cap, aes(y=catch, x=year, fill=fleet)) +
+  geom_bar(stat = 'identity', alpha=0.8) +
+  theme_few()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 2))+
+  scale_x_continuous(breaks = seq(from = 1994, to = 2022, by = 3))+
+  scale_fill_viridis(discrete=F,
+                     option="H")+
+  facet_wrap(.~fleet, labeller = as_labeller(flotas),
+             ncol = 4)+
+  theme(legend.position="none")+
+  ylab('Desembarques (t)')+
+  xlab('')+
+  ggtitle('')
+cap1
+```
+
+### Monitoreo de la Pesquería
+
+Información del Programa de Seguimiento de la pesquería de pesquerías pelágicas-demersales del Instituto de Fomento Pesquero. La información proviene del monitoreo artesanal e industrial en la zona centro-sur de Chile, en donde se destacan dos flotas de pesca, la artesanal de enmalle y artesanal de espinel, siendo esta ultima la mas importante en terminos de registros e historial.
+
+En ambos casos se obtienen datos de: i) estructura de tamaños, ii) composiciones por edad, iii) parámetros de crecimiento y iv) peso anuales por edad/talla y años. En el caso de la pesquería industrial, el monitoreo permitió obtener composición de abundancia a la edad entre los años 2017 y 2021.
+
+### Parámetros biológicos
 
 La Tabla \ref{t1} identifica los parametros de información disponbles que provienen del reporte técnico de @Demer2020. En este informe no se realizó una revisión de los parámetros biologicos disponibles, dado que se utilizaron los de las evaluaciones previas para ser consistentes con los informes anteeriores de evaluación y la información utilizada.
 
 \pagebreak
 
 ```{r  warning=F, message=F, include=FALSE}
-start <- r4ss::SS_readstarter(file = file.path(dir3, "starter.SS"), 
+start <- r4ss::SS_readstarter(file = file.path(dir1, "starter.SS"), 
                               verbose = FALSE)
-dat <- r4ss::SS_readdat(file = file.path(dir3, start$datfile),
+dat <- r4ss::SS_readdat(file = file.path(dir1, start$datfile),
                         verbose = FALSE)
-ctl <- r4ss::SS_readctl(file = file.path(dir3, start$ctlfile),
+ctl <- r4ss::SS_readctl(file = file.path(dir1, start$ctlfile),
                         verbose = FALSE,
                         use_datlist = TRUE, datlist = dat)
 
 ```
 
 ```{r echo=FALSE}
-parbio <-ctl$MG_parms[,1:8]
+parbio <-round(ctl$MG_parms[,1:8],2)
 
 kbl(parbio, booktabs = T,format = "latex",
     caption = "\\label{t1}Parámetros biológicos") %>%
@@ -132,317 +164,6 @@ kbl(step, booktabs = T,format = "latex",
     caption = "\\label{t2}Parámetros Relación S-R") %>%
       kable_styling(latex_options = "HOLD_position")
 ```
-
-## Datos utilizados
-
-a.  Desembarque industrial y artesanal del período (1994-2021) separados por flota, provenientes de las estadisticas oficiales de Sernapesca (Subsecretaria de Pesca, 2021). Al disponer de los desembarques oficiales por flota, es posible segregar información oficial por flotas, siendo factible a la vez disponer de datos oficiales (reportados). Cabe señalar que en esta pesquería aun no se realizan procesos de corrección de desembarques.
-
-b.  Información del Programa de Seguimiento de la pesquería de pesquerías demersales del Instituto de Fomento Pesquero.
-
-La información proviene del monitoreo artesanal e industrial en la zona centro-sur de Chile, en donde se destacan dos flotas de pesca, la artesanal de enmalle y artesanal de espinel, siendo esta ultima la mas importante en terminos de registros e historial.
-
-En ambos casos se obtienen datos de: i) estructura de tamaños, ii) composiciones por edad, iii) parámetros de crecimiento y iv) peso anuales por edad/talla y años.
-
-Por otro lado, los rendimientos de pesca de cada flota fueron estandarizados mediante modelos lineales generalizados.
-
-c.  En el caso de la pesquería industrial, el monitoreo permitió obtener composición de abundancia a la edad entre los años 2017 y 2021.
-
-El esquema de evaluación presentado considera una modelación secuencial por flotas artesanal e industrial. La flota con mayor historial pesquero de acuerdo a los analisis es la flota artesanal de espinel, que para este caso se determinara como modelo base de evaluuación.
-
-La evaluación de stock en SS3 de *Brama australis* en la zona Centro Sur de Chile se realiza de manera jerarquica integrando la información relativa a las tres flotas que operan en el recurso. A saber;
-
--   Espinel Artesanal (1)
--   Enmalle Artesanal (2)
--   Industrial (3)
-
-En la Tabla 3. se enumeran y describen los escenarios de modelación en función de las flotas disponibles.
-
-| Escenario | Descripción                                      |
-|:---------:|:-------------------------------------------------|
-|    s1     | Flotas Espinel, Enmalle, Industrial cv 0.2 , 0.75 h (base) |
-|    s2     | Flotas Espinel, Enmalle, Industrial cv 0.3 índice          |
-|    s3     | Flotas Espinel, Enmalle, Industrial cv 0.4 índice  |
-|    s4     | Flotas Espinel, Enmalle, Industrial cv 0.5  indice |
-|    s5     | Flotas Espinel, Enmalle, Industrial 0.6 h         |
-|    s6     | Flotas Espinel, Enmalle, Industrial Nsamp Tallas 25 |
-|    s7     | Flotas Espinel, Enmalle, Industrial y Capturas SMRPFO  |
-
-: Escenarios y descripción de los modelos de evaluación de Reineta 2022 {tbl-colwidths="\[15,50\]"}
-
-Para avanzar en la implenteación metodológica, se establece con fines comparativos modelo por flotas artesanales, donde un modelo utiliza la información de enmalle artesanal, para luego sumar la flota enmalle artesanal, para terminar incorporando la información de la flota industrial. Tambmien se ehecutan las flotas por separado (Tabla 1).
-
-## Modelos reportados
-
-Cabe mencionar que el modelo utilizado para la toma de decisiones esta basado en un modelo de producción basado en datos de captura con uso de supuestos asociados a los niveles de agotamiento [@Demer2020; @Zhou2009; @Zhou2013]. Por otro lado, se ha avanzado en la implementación de modelos integrados utilizando datos de la flota artesanal de enmalle [@Demer2020; @brama2022].
-
-Al momento de la elaboración de este informe, existen tres modelos implementados a la fecha, a saber el *s2*, *s3*, *s4* y *s5*. Estos modelos seran presentados a continuación en referencia las piezas de información disponibles y salidas de la evaluación.
-
-### Datos utilizados en `s1`
-
-```{r eval=FALSE, message=F, include=FALSE}
-# datos version ultima
-#OR 
-r4ss::run(
-  dir = dir1,
-  exe = "ss_osx",
-  skipfinished = FALSE, # TRUE will skip running if Report.sso present
-  show_in_console = TRUE # change to true to watch the output go past
-)
-```
-
-
-```{r message=F, include=FALSE}
-base.model1 <- SS_output(dir=dir1,
-                        covar=T,
-                        forecast=T)
-```
-
-Saco los outputs en html
-
-```{r eval=FALSE,  message=F, include=FALSE}
-SS_plots(base.model1, 
-         uncertainty = TRUE,
-         datplot = T, 
-         png=T, 
-         aalresids = F,
-         btarg=0.4, 
-         minbthresh=0.2, 
-         forecast=T)
-```
-
-### Datos utilizados en `s2`
-
-```{r eval=FALSE, message=F, include=FALSE}
-# datos version ultima
-#OR 
-r4ss::run(
-  dir = dir2,
-  exe = "ss_osx",
-  skipfinished = FALSE, # TRUE will skip running if Report.sso present
-  show_in_console = TRUE # change to true to watch the output go past
-)
-```
-
-
-```{r message=F, include=FALSE}
-base.model2 <- SS_output(dir=dir2,
-                        covar=T,
-                        forecast=T)
-```
-
-Saco los outputs en html
-
-```{r eval=FALSE,  message=F, include=FALSE}
-SS_plots(base.model2, 
-         uncertainty = TRUE,
-         datplot = T, 
-         png=T, 
-         aalresids = F,
-         btarg=0.4, 
-         minbthresh=0.2, 
-         forecast=T)
-```
-
-### Datos utilizados en `s3`
-
-```{r eval=FALSE, message=F, include=FALSE}
-# datos version ultima
-#OR 
-r4ss::run(
-  dir = dir3,
-  exe = "ss_osx",
-  skipfinished = FALSE, # TRUE will skip running if Report.sso present
-  show_in_console = TRUE # change to true to watch the output go past
-)
-```
-
-
-```{r message=F, include=FALSE}
-base.model3 <- SS_output(dir=dir3,
-                        covar=T,
-                        forecast=T)
-```
-
-Saco los outputs en html
-
-```{r eval=FALSE,  message=F, include=FALSE}
-SS_plots(base.model3, 
-         uncertainty = TRUE,
-         datplot = T, 
-         png=T, 
-         aalresids = F,
-         btarg=0.4, 
-         minbthresh=0.2, 
-         forecast=T)
-```
-
-### Datos utilizados en `s4`
-
-```{r eval=FALSE, message=F, include=FALSE}
-# datos version ultima
-#OR 
-r4ss::run(
-  dir = dir4,
-  exe = "ss_osx",
-  skipfinished = FALSE, # TRUE will skip running if Report.sso present
-  show_in_console = TRUE # change to true to watch the output go past
-)
-```
-
-
-```{r message=F, include=FALSE}
-base.model4 <- SS_output(dir=dir4,
-                        covar=T,
-                        forecast=T)
-```
-
-Saco los outputs en html
-
-```{r eval=FALSE,  message=F, include=FALSE}
-SS_plots(base.model4, 
-         uncertainty = TRUE,
-         datplot = T, 
-         png=T, 
-         aalresids = F,
-         btarg=0.4, 
-         minbthresh=0.2, 
-         forecast=T)
-```
-
-### Datos utilizados en `s5`
-
-```{r eval=FALSE, message=F, include=FALSE}
-# datos version ultima
-#OR 
-r4ss::run(
-  dir = dir5,
-  exe = "ss_osx",
-  skipfinished = FALSE, # TRUE will skip running if Report.sso present
-  show_in_console = TRUE # change to true to watch the output go past
-)
-```
-
-
-```{r message=F, include=FALSE}
-base.model5 <- SS_output(dir=dir5,
-                        covar=T,
-                        forecast=T)
-```
-
-Saco los outputs en html
-
-```{r eval=FALSE,  message=F, include=FALSE}
-SS_plots(base.model5, 
-         uncertainty = TRUE,
-         datplot = T, 
-         png=T, 
-         aalresids = F,
-         btarg=0.4, 
-         minbthresh=0.2, 
-         forecast=T)
-```
-
-### Datos utilizados en `s6`
-
-```{r eval=FALSE, message=F, include=FALSE}
-# datos version ultima
-#OR 
-r4ss::run(
-  dir = dir6,
-  exe = "ss_osx",
-  skipfinished = FALSE, # TRUE will skip running if Report.sso present
-  show_in_console = TRUE # change to true to watch the output go past
-)
-```
-
-
-```{r message=F, include=FALSE}
-base.model6 <- SS_output(dir=dir6,
-                        covar=T,
-                        forecast=T)
-```
-
-Saco los outputs en html
-
-```{r eval=FALSE,  message=F, include=FALSE}
-SS_plots(base.model6, 
-         uncertainty = TRUE,
-         datplot = T, 
-         png=T, 
-         aalresids = F,
-         btarg=0.4, 
-         minbthresh=0.2, 
-         forecast=T)
-```
-
-
-### Datos utilizados en `s7`
-
-```{r eval=FALSE, message=F, include=FALSE}
-# datos version ultima
-#OR 
-r4ss::run(
-  dir = dir7,
-  exe = "ss_osx",
-  skipfinished = FALSE, # TRUE will skip running if Report.sso present
-  show_in_console = TRUE # change to true to watch the output go past
-)
-```
-
-
-```{r message=F, include=FALSE}
-base.model7 <- SS_output(dir=dir7,
-                        covar=T,
-                        forecast=T)
-```
-
-Saco los outputs en html
-
-```{r eval=FALSE,  message=F, include=FALSE}
-SS_plots(base.model7, 
-         uncertainty = TRUE,
-         datplot = T, 
-         png=T, 
-         aalresids = F,
-         btarg=0.4, 
-         minbthresh=0.2, 
-         forecast=T)
-```
-### Desembarques
-
-
-```{r include=FALSE}
-start <- r4ss::SS_readstarter(file = file.path(dir1, "starter.SS"), 
-                              verbose = FALSE)
-dat <- r4ss::SS_readdat(file = file.path(dir1, start$datfile),
-                        verbose = FALSE)
-#ctl <- r4ss::SS_readctl(file = file.path(dir1, start$ctlfile),
-#                        verbose = FALSE,
-#                        use_datlist = TRUE, datlist = dat)
-
-```
-
-Los desembarques utilizados para cada una de las flotas que generan remoción en el recurso reineta, a saber; espinel, enmalle e industrial (Figura 6).
-
-```{r echo=FALSE, fig.pos="H", fig.height=3,fig.width=7, fig.cap= "\\label{F2}Desembarques de merluza común por flota"}
-
-flotas <- c(`1` = "Enmalle",
-                    `2` = "Espinel",
-                    `3` = "Industrial")
-cap <-dat$catch
-cap1 <- ggplot(cap, aes(y=catch, x=year, fill=fleet)) +
-  geom_bar(stat = 'identity', alpha=0.8) +
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 90, hjust = 2))+
-  scale_fill_viridis(discrete=F)+
-  facet_wrap(.~fleet, labeller = as_labeller(flotas))+
-  theme(legend.position="none")+
-  ylab('Landings (t.)')+
-  xlab('')+
-  ggtitle('')
-cap1
-```
-
 ### Rendimiento de pesca (CPUE)
 
 Utilizando modelos lineales generalizados (GLM), se realiza la estandarización de los rendimientos de pesca para la flota artesanal e industrial que operó sobre reineta, utilizando la información proveniente del monitoreo de las pesquerías de espinel, enmalle e industrial entre los años 1998 y 2021. Se utilizan las bases de datos del Programa de seguimiento de las pesquerías demersal centro-sur (bitácoras de pesca IFOP). La base de datos correspondiente a espinel, ya que es la más extensa y con un mayor número de registros anuales. Este año se ha incorporado el análisis incorporando la red de enmalle como otro arte de pesca y la flota industrial que dirige sus lances de pesca a reineta.
@@ -477,14 +198,14 @@ kbl(cpues3in, booktabs = T,format = "latex",
 
 Por otro lado, se presentan los graficos que señalan las tendiencias de los rendimientos (Figura 5).
 
-```{r echo=FALSE, fig.height=3, fig.width=8, fig.cap="Tendencia de Rendinientos estandarizados para Reineta utilizados en el s5 para Espinel (1), Enmalle (2) e Industrial (3)", fig.pos="H"}
+```{r echo=FALSE, fig.cap="Tendencia de Rendinientos estandarizados para Reineta utilizados en el s5 para Espinel (1), Enmalle (2) e Industrial (3)", fig.pos="H"}
 
 cpues3 <- ggplot(cpues3enesin, aes(y=obs, x=year)) +
   geom_point(stat = 'identity', color=2,alpha=.9, size=2) +
   stat_smooth(colour='#253494',
-              method="lm")+
-  scale_x_continuous(breaks = seq(from = 1996, to = 2021, by = 5))+
-  theme_bw()+
+              method="loess")+
+  scale_x_continuous(breaks = seq(from = 1996, to = 2022, by = 5))+
+  theme_few()+
   theme(axis.text.x = element_text(angle = 90, hjust = 2))+
   facet_wrap(~index)+
   ylab('CPUE (t./hr haul)')+
@@ -494,184 +215,496 @@ cpues3
 
 ```
 
-### Indice de Biomasa  [@Zhou2013]
+### Captura SPRFMO
 
-Considerando la evaluación de stock reportada en @Demer2020 y @brama2022, en este trabajo se añadió un indice de abundancia indirecto basado en el metodo de  @Zhou2013. Es importante señalar que este tipo de métodos suponen que las capturas del recurso son verdaderas y que la especie en estudio constituye un stock cerrado en el área de estudio. Es decir, no hay inmigración o emigración. A pesar de dichas limitaciones, este método fue utilizado para estimar los Puntos Biológicos de Referencia (PBR), estatus y cálculo de CBA para el año 2021.
+Por primera vez, se incorpora un escenario de modelación que integra las capturas provenientes de la flota industrial que opera fuera de la ZEE. Estos datos fueron provistos por la Pelagic Freezer Trawler Association (PFA) [http://www.pelagicfish.eu/](http://www.pelagicfish.eu/).
 
-Este modelo tiene estimaciones de biomasa a través de la serie analizada, las cuales fueron utilizadas en esta modelación en desmedro de las tendencias de los rendimientos de pesca. A continuación, el indice estimado.
+El esquema completo de datos y su dimensión temporal son expresados en la figura 7 
+```{r fig.cap="Ajuste Tallas s1", fig.pos="H"}
 
-```{r include=FALSE}
-dat5 <- r4ss::SS_readdat(file = file.path(dir5, start$datfile),
-                        verbose = FALSE)
+base.model7 <- SS_output(dir=dir7,
+                        covar=T,
+                        forecast=T)
+
+SSplotData(base.model7, 
+           subplots = 1,
+           fleetcol = c('#a6611a','#dfc27d','#80cdc1','#018571'),
+           datatypes = "all")
 ```
 
-Los desembarques en la Figura \ref{F2}
+## Escenarios de Modelación
 
-```{r echo=FALSE, fig.pos='H', fig.height=4,fig.width=4, fig.cap= "\\label{F2}Biomasa Zhou (2009)"}
+El esquema de evaluación presentado considera una modelación secuencial por flotas artesanal e industrial. La flota con mayor historial pesquero de acuerdo a los analisis es la flota artesanal de espinel. La evaluación de stock en SS3 de *Brama australis* en la zona Centro Sur de Chile se realiza de manera jerarquica integrando la información relativa a las tres flotas que operan en el recurso. A saber;
 
-sb <- ggplot(dat5$CPUE[1:28,], aes(y=obs, x=year)) +
-  geom_point(stat = 'identity', color=3,alpha=.9, size=2) +
-  stat_smooth(colour=3)+
-  scale_x_continuous(breaks = seq(from = 1996, to = 2021, by = 5))+
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 90, hjust = 2))+
-  ylab('Biomasa (t.)')+
-  xlab('')+
-  ggtitle('')+
-  ylim(0,180000)
-sb
+-   Espinel Artesanal (1)
+-   Enmalle Artesanal (2)
+-   Industrial (3)
+-   SPRFMO (4)
+
+En la Tabla 3. se enumeran y describen los escenarios de modelación en función de las flotas disponibles. Estos escenarios tienen sentido respecto a la confianza en la señal de los indices, asi como tambien a la densodependencia de la biomasa reproductira sobre el reclutamiento. Por otro lado, seincorpora un escenario con datos de remoción de la flota pelagica que opera fuera de la ZEE.
+
+La siguiente tabla describe los escenarios y su detalle;
+
+| Escenario | Descripción                                      |
+|:---------:|:-------------------------------------------------|
+|    s1     | Flotas Espinel, Enmalle, Industrial cv 0.2 , 0.75 h (base) |
+|    s2     | Flotas Espinel, Enmalle, Industrial cv 0.3 índice          |
+|    s3     | Flotas Espinel, Enmalle, Industrial cv 0.4 índice  |
+|    s4     | Flotas Espinel, Enmalle, Industrial cv 0.5  indice |
+|    s5     | Flotas Espinel, Enmalle, Industrial 0.6 h         |
+|    s6     | Flotas Espinel, Enmalle, Industrial Nsamp Tallas 25 |
+|    s7     | Flotas Espinel, Enmalle, Industrial y Capturas SPRFMO  |
+
+: Escenarios y descripción de los modelos de evaluación de Reineta 2022
+
+
+
+Cabe mencionar que el modelo utilizado para la toma de decisiones esta basado en un modelo de producción basado en datos de captura con uso de supuestos asociados a los niveles de agotamiento [@Demer2020; @Zhou2009; @Zhou2013]. Por otro lado, se ha avanzado en la implementación de modelos integrados utilizando datos de la flota artesanal de enmalle [@Demer2020; @brama2022].
+
+Al momento de la elaboración de este informe, existen tres modelos implementados a la fecha, a saber el *s1*, *s2*, *s3*, *s4* , *s5*, *s6*y *s7*. Estos modelos seran presentados a continuación en referencia las piezas de información disponibles y salidas de la evaluación.
+
+## Plataforma de modelación
+
+Los modelos implementados fueron configurados utilizando Stock Synthesis (SS3 de aquí en mas)(<https://vlab.noaa.gov/web/stock-synthesis>) con la versión mas actualizada (3.30.21). SS3 es un modelo de evaluación de stock edad y talla estrucuturado, en la clase de modelos denominados "*Modelo de análisis integrado de evaluación de stock*". SS3 tiene un sub-modelo poblacional de stock que simula crecimiento, madurez, fecundidad, reclutamiento, movimiento, y procesos de mortalidad, y sub-modelos de observation y valores esperados para diferentes tipos de datos. El modelo es codificado en `C++` con parámetros de estimación activados por diferenciación automática (ADMB) [@Fournier2012; @Methot2013]. El análisis de resultados y salidas emplea herramientas de R e interfase gráfica de la librería `r4ss` (<https://github.com/r4ss/r4ss>) [@Taylor2019] y diagnóstico con `ss3diags` [@Winker2023].
+
+```{r eval=FALSE, message=F, include=FALSE}
+### Datos utilizados en `s1`
+#OR 
+r4ss::run(
+  dir = dir1,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
 ```
 
+```{r message=F, include=FALSE}
+base.model1 <- SS_output(dir=dir1,
+                        covar=T,
+                        forecast=T)
+```
+
+
+```{r eval=FALSE,  message=F, include=FALSE}
+# Saco los outputs en html
+SS_plots(base.model1, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+
+
+```{r eval=FALSE, message=F, include=FALSE}
+### Datos utilizados en `s2`
+#OR 
+r4ss::run(
+  dir = dir2,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
+```
+
+
+```{r message=F, include=FALSE}
+base.model2 <- SS_output(dir=dir2,
+                        covar=T,
+                        forecast=T)
+```
+
+
+```{r eval=FALSE,  message=F, include=FALSE}
+# Saco los outputs en html
+SS_plots(base.model2, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+
+```{r eval=FALSE, message=F, include=FALSE}
+### Datos utilizados en `s3`
+#OR 
+r4ss::run(
+  dir = dir3,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
+```
+
+
+```{r message=F, include=FALSE}
+base.model3 <- SS_output(dir=dir3,
+                        covar=T,
+                        forecast=T)
+```
+
+
+
+```{r eval=FALSE,  message=F, include=FALSE}
+#Saco los outputs en html
+SS_plots(base.model3, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+
+
+```{r eval=FALSE, message=F, include=FALSE}
+### Datos utilizados en `s4`
+#OR 
+r4ss::run(
+  dir = dir4,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
+```
+
+
+```{r message=F, include=FALSE}
+base.model4 <- SS_output(dir=dir4,
+                        covar=T,
+                        forecast=T)
+```
+
+
+```{r eval=FALSE,  message=F, include=FALSE}
+# Saco los outputs en html
+SS_plots(base.model4, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+
+```{r eval=FALSE, message=F, include=FALSE}
+### Datos utilizados en `s5` 
+r4ss::run(
+  dir = dir5,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
+```
+
+
+```{r message=F, include=FALSE}
+base.model5 <- SS_output(dir=dir5,
+                        covar=T,
+                        forecast=T)
+```
+
+
+```{r eval=FALSE,  message=F, include=FALSE}
+# Saco los outputs en html
+SS_plots(base.model5, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+
+```{r eval=FALSE, message=F, include=FALSE}
+### Datos utilizados en `s6`
+
+r4ss::run(
+  dir = dir6,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
+```
+
+
+```{r message=F, include=FALSE}
+base.model6 <- SS_output(dir=dir6,
+                        covar=T,
+                        forecast=T)
+```
+
+
+
+```{r eval=FALSE,  message=F, include=FALSE}
+# Saco los outputs en html
+SS_plots(base.model6, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
+
+
+```{r eval=FALSE, message=F, include=FALSE}
+### Datos utilizados en `s7` 
+r4ss::run(
+  dir = dir7,
+  exe = "ss_osx",
+  skipfinished = FALSE, # TRUE will skip running if Report.sso present
+  show_in_console = TRUE # change to true to watch the output go past
+)
+```
+
+
+```{r message=F, include=FALSE}
+base.model7 <- SS_output(dir=dir7,
+                        covar=T,
+                        forecast=T)
+```
+
+```{r eval=FALSE,  message=F, include=FALSE}
+# Saco los outputs en html
+SS_plots(base.model7, 
+         uncertainty = TRUE,
+         datplot = T, 
+         png=T, 
+         aalresids = F,
+         btarg=0.4, 
+         minbthresh=0.2, 
+         forecast=T)
+```
 
 \pagebreak
 
 # RESULTADOS
 
-Respecto a los valores y parámetros biológicos modelados, los siguientes gráficos identifican los estimadores puntuales del recurso en *s2*, *s3* , *s4* y  *s5*. En el primer analisis visualizamos el modelo de crecimkento individual del recurso en cada modelo.
+## Aspectos biológicos
 
-::: {layout-ncol="3"}
+En el primer análisis visualizamos el modelo de crecimiento individual del recurso en cada modelo. Como ejemplo desplegamos el modelo `s1`.
 
-```{r fig.height=4,fig.width=4, fig.cap="\\label{fig:fig} Curva de crecimiento en s1", fig.pos="H"}
-SSplotBiology(base.model1, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
-    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
-    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
-    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
- )
+::: {layout-ncol="4"}
+
+```{r  fig.cap="\\label{fig:fig} Curva de crecimiento en s1", fig.pos="H"}
+SSplotBiology(base.model1, 
+              subplots =c(1,6, 4))
 ```
 
-```{r fig.height=4,fig.width=4, fig.cap="\\label{fig:fig} Curva de crecimiento en s2", fig.pos="H"}
-SSplotBiology(base.model2, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
-    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
-    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
-    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
- )
+```{r eval=FALSE, fig.cap="\\label{fig:fig} Curva de crecimiento en s2", fig.pos="H"}
+SSplotBiology(base.model2, 
+              subplots =c(1,6))
 ```
 
-```{r fig.height=4,fig.width=4, fig.cap="\\label{fig:fig}curva de crecimiento en s3", fig.pos="H"}
-SSplotBiology(base.model3, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
-    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
-    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
-    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
- )
+```{r eval=FALSE, fig.cap="\\label{fig:fig} Curva de crecimiento en s2", fig.pos="H"}
+SSplotBiology(base.model3, 
+              subplots =c(1,6))
 ```
 
-```{r fig.height=4,fig.width=4, fig.cap="\\label{fig:fig}curva de crecimiento en s4", fig.pos="H", }
-SSplotBiology(base.model4, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
-    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
-    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
-    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
- )
+```{r eval=FALSE, fig.cap="\\label{fig:fig} Curva de crecimiento en s2", fig.pos="H"}
+SSplotBiology(base.model4, 
+              subplots =c(1,6))
 ```
 
-```{r fig.height=4,fig.width=4, fig.cap="\\label{fig:fig}curva de crecimiento en s5", fig.pos="H"}
-SSplotBiology(base.model5, subplots =1, labels = c("Length (cm)", "Age (yr)", "Maturity", "Mean weight (kg) in last year",
-    "Spawning output", "Length (cm, beginning of the year)", "Natural mortality",
-    "Female weight (kg)", "Female length (cm)", "Fecundity", "Default fecundity label",
-    "Year", "Hermaphroditism transition rate", "Fraction females by age at equilibrium"),
- )
+```{r eval=FALSE, fig.cap="\\label{fig:fig} Curva de crecimiento en s2", fig.pos="H"}
+SSplotBiology(base.model5, 
+              subplots =c(1,6))
 ```
 
+```{r eval=FALSE, fig.cap="\\label{fig:fig} Curva de crecimiento en s2", fig.pos="H"}
+SSplotBiology(base.model6, 
+              subplots =c(1,6))
+```
+
+
+```{r eval=FALSE, fig.cap="\\label{fig:fig} Curva de crecimiento en s2", fig.pos="H"}
+SSplotBiology(base.model7, 
+              subplots =c(1,6))
+```
 :::
 
 \pagebreak 
+
 ## Ajustes
 
-Una de las mas básicas formas de identificar el desempeño de los modelos es mirando los ajustes asociados a la estimación de parámetros y variables. En primer lugar observamos los ajustes a las tallas de cada escenario.
+Una de las mas básicas formas de identificar el desempeño de los modelos es corroborando los ajustes asociados a la estimación de parámetros y variables. En primer lugar observamos los ajustes a las tallas de cada escenario.
 
 ```{r fig.cap="Ajuste Tallas s1", fig.pos="H"}
-SSplotComps(base.model, subplots = 1,
+SSplotComps(base.model1, subplots = 1,
             fleetnames = c("Espinel", "Enmalle", "Industrial"),
             sizemethod = 2,
             smooth = TRUE,
-            maxcols = 4)
+            maxcols = 5,
+            maxrows = 5,
+            linescol=2)
 ```
 
-```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s2", fig.pos="H"}
+```{r fig.cap="Ajuste Tallas s2", fig.pos="H"}
 SSplotComps(base.model2, subplots = 1,
-            fleetnames = c("Enmalle"),
+            fleetnames = c("Espinel", "Enmalle", "Industrial"),
             sizemethod = 2,
-            smooth = TRUE)
+            smooth = TRUE,
+            maxcols = 5,
+            maxrows = 5,
+            linescol=2)
 ```
-
-```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s3", fig.pos="H"}
+```{r fig.cap="Ajuste Tallas s3", fig.pos="H"}
 SSplotComps(base.model3, subplots = 1,
-            fleetnames = c("Espinel", "Enmalle"),
+            fleetnames = c("Espinel", "Enmalle", "Industrial"),
             sizemethod = 2,
-            smooth = TRUE)
+            smooth = TRUE,
+            maxcols = 5,
+            maxrows = 5,
+            linescol=2)
 ```
 
-```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s4", fig.pos="H"}
+
+```{r fig.cap="Ajuste Tallas s4", fig.pos="H"}
 SSplotComps(base.model4, subplots = 1,
-            fleetnames = c("Espinel"),
+            fleetnames = c("Espinel", "Enmalle", "Industrial"),
             sizemethod = 2,
-            smooth = TRUE)
+            smooth = TRUE,
+            maxcols = 5,
+            maxrows = 5,
+            linescol=2)
 ```
 
-```{r fig.height=5,fig.width=6, fig.cap="Ajuste Tallas s5", fig.pos="H"}
+```{r fig.cap="Ajuste Tallas s5", fig.pos="H"}
 SSplotComps(base.model5, subplots = 1,
-            fleetnames = c("Espinel"),
+            fleetnames = c("Espinel", "Enmalle", "Industrial"),
             sizemethod = 2,
-            smooth = TRUE)
+            smooth = TRUE,
+            maxcols = 5,
+            maxrows = 5,
+            linescol=2)
 ```
+
+
+```{r fig.cap="Ajuste Tallas s6", fig.pos="H"}
+SSplotComps(base.model6, subplots = 1,
+            fleetnames = c("Espinel", "Enmalle", "Industrial"),
+            sizemethod = 2,
+            smooth = TRUE,
+            maxcols = 5,
+            maxrows = 5,
+            linescol=2)
+```
+
+```{r fig.cap="Ajuste Tallas s7", fig.pos="H"}
+SSplotComps(base.model7, subplots = 1,
+            fleetnames = c("Espinel", "Enmalle", "Industrial"),
+            sizemethod = 2,
+            smooth = TRUE,
+            maxcols = 5,
+            maxrows = 5,
+            linescol=2)
+```
+
 
 \pagebreak
-## Biomasa desovante
 
-La estimación de biomasa total por modelo da cuenta de las diferencias entre modelos. A continuación se grafican las salida de las biomasas de los modelos *s1*, *s2*, *s3*, *s4* y *s5*.
+## Variables Poblacionales
 
-::: {layout-ncol="3"}
+### Biomasa desovante
+
+::: {layout-ncol="4"}
 
 ```{r fig.cap="Biomasa total s1", fig.pos="H"}
-SSplotTimeseries(base.model, subplot = 7)
+SSplotTimeseries(base.model1, 
+                 subplot = 7,
+                 areacols = 1)
 ```
 
 ```{r fig.cap="Biomasa total s2", fig.pos="H"}
-SSplotTimeseries(base.model2, subplot = 1)
+SSplotTimeseries(base.model2, 
+                 subplot = 7,
+                 areacols = 1)
 ```
 
-```{r fig.height=3,fig.width=3, fig.cap="Biomasa total s3", fig.pos="H"}
-SSplotTimeseries(base.model3, subplot = 1)
+```{r fig.cap="Biomasa total s3", fig.pos="H"}
+SSplotTimeseries(base.model3, 
+                 subplot = 7,
+                 areacols = 1)
 ```
 
 
 ```{r fig.cap="Biomasa total s4", fig.pos="H"}
-SSplotTimeseries(base.model4, subplot = 1)
+SSplotTimeseries(base.model4, 
+                 subplot = 7,
+                 areacols = 1)
 ```
 
-
-```{r fig.height=3,fig.width=3, fig.cap="Biomasa total s5", fig.pos="H"}
-SSplotTimeseries(base.model5, subplot = 1)
+```{r fig.cap="Biomasa total s5", fig.pos="H"}
+SSplotTimeseries(base.model5, 
+                 subplot = 7,
+                 areacols = 1)
 ```
 
+```{r fig.cap="Biomasa total s6", fig.pos="H"}
+SSplotTimeseries(base.model6, 
+                 subplot = 7,
+                 areacols = 1)
+```
+
+```{r fig.cap="Biomasa total s7", fig.pos="H"}
+SSplotTimeseries(base.model7, 
+                 subplot = 7,
+                 areacols = 1)
+```
 :::
 
 \pagebreak 
 ## Reclutamiento
 
-Las siguientes figuyras muestran los desvios del reclutamiento para los escenarios *s1*, *s2*, *s3*, *s4* y *s5*.
+Las siguientes figuras muestran los desvios del reclutamiento para los todos los escenarios
 
-::: {layout-ncol="3"}
-```{r fig.height=3,fig.width=3, fig.cap=" Dev recruits s2", fig.pos="H"}
-SSplotRecdevs(base.model1, subplot = 2)
+::: {layout-ncol="4"}
+```{r fig.cap=" Dev recruits s1", fig.pos="H"}
+SSplotRecdevs(base.model1, 
+              subplot = 3)
+```
+```{r fig.cap=" Dev recruits s2", fig.pos="H"}
+SSplotRecdevs(base.model2, 
+              subplot = 3)
 ```
 
-
-```{r fig.height=3,fig.width=3, fig.cap=" Dev recruits s2", fig.pos="H"}
-SSplotRecdevs(base.model2, subplot = 2)
+```{r fig.cap=" Dev recruits s3", fig.pos="H"}
+SSplotRecdevs(base.model3, 
+              subplot = 3)
 ```
 
-```{r fig.height=3,fig.width=3, fig.cap=" Dev recruits s3", fig.pos="H"}
-SSplotRecdevs(base.model3, subplot = 2)
+```{r fig.cap=" Dev recruits s4", fig.pos="H"}
+SSplotRecdevs(base.model4, 
+              subplot = 3)
 ```
 
-
-```{r fig.height=3,fig.width=3, fig.cap=" Dev recruits s4", fig.pos="H"}
-SSplotRecdevs(base.model4, subplot = 2)
+```{r fig.cap=" Dev recruits s5", fig.pos="H"}
+SSplotRecdevs(base.model5, 
+              subplot = 3)
 ```
 
+```{r fig.cap=" Dev recruits s6", fig.pos="H"}
+SSplotRecdevs(base.model6, 
+              subplot = 3)
+```
 
-```{r fig.height=3,fig.width=3, fig.cap=" Dev recruits s5", fig.pos="H"}
-SSplotRecdevs(base.model5, subplot = 2)
+```{r fig.cap=" Dev recruits s7", fig.pos="H"}
+SSplotRecdevs(base.model7, 
+              subplot = 3)
 ```
 :::
 
@@ -681,25 +714,39 @@ SSplotRecdevs(base.model5, subplot = 2)
 
 La mortalidad por pesca se identifica en las siguientes figuras.
 
-::: {layout-ncol="3"}
+::: {layout-ncol="4"}
 ```{r fig.cap=" Mortalidad pot Pesca s1", fig.pos="H"}
-SSplotSummaryF(base.model1)
+SSplotSummaryF(base.model1,
+               Ftgt = 0.35)
 ```
-
 ```{r fig.cap=" Mortalidad pot Pesca s2", fig.pos="H"}
-SSplotSummaryF(base.model2)
+SSplotSummaryF(base.model2,
+               Ftgt = 0.35)
 ```
 
-```{r  fig.cap=" Mortalidad pot Pesca s3", fig.pos="H"}
-SSplotSummaryF(base.model3)
+```{r fig.cap=" Mortalidad pot Pesca s3", fig.pos="H"}
+SSplotSummaryF(base.model3,
+               Ftgt = 0.35)
 ```
 
-```{r fig.height=3,fig.width=3, fig.cap=" Mortalidad pot Pesca s4", fig.pos="H"}
-SSplotSummaryF(base.model4)
+```{r fig.cap=" Mortalidad pot Pesca s4", fig.pos="H"}
+SSplotSummaryF(base.model4,
+               Ftgt = 0.35)
 ```
 
-```{r fig.height=3,fig.width=3, fig.cap=" Mortalidad pot Pesca s5", fig.pos="H"}
-SSplotSummaryF(base.model5)
+```{r fig.cap=" Mortalidad pot Pesca s5", fig.pos="H"}
+SSplotSummaryF(base.model5,
+               Ftgt = 0.35)
+```
+
+```{r fig.cap=" Mortalidad pot Pesca s6", fig.pos="H"}
+SSplotSummaryF(base.model6,
+               Ftgt = 0.35)
+```
+
+```{r fig.cap=" Mortalidad pot Pesca s7", fig.pos="H"}
+SSplotSummaryF(base.model7,
+               Ftgt = 0.35)
 ```
 :::
 
@@ -708,25 +755,28 @@ SSplotSummaryF(base.model5)
 
 ## Retrospectivo
 
-Los análisis retrospectivo, dan cuenta de diferencias de estimación (sub - sobreestimación) en los patrones entre modelos evaluados. 
+Los análisis retrospectivo, dan cuenta de diferencias de estimación (sub - sobreestimación) en los patrones entre modelos evaluados a través del parámetro de Mho.
 
 ## Retro `s1`
 
-```{r warning = FALSE, message = FALSE, echo=FALSE}
+```{r eval=FALSE, warning = FALSE, message = FALSE}
 retro(dir=dir1, oldsubdir="", 
       newsubdir="Retrospective", 
       years= 0:-5,
       exe="ss_osx",
       extras = "-nox", 
       skipfinished = F)
+```
 
+
+```{r  warning = FALSE, message = FALSE}
 retroModels1 <- SSgetoutput(dirvec=file.path(dir1, "Retrospective",
                                              paste("retro",0:-5,
                                                    sep="")))
+
 retroSummary1 <- SSsummarize(retroModels1)
 endyrvec <- retroSummary1$endyrs + 0:-5
 #save(retroSummary1, retroModels1, file="retro5.Rdata")
-
 
 SSplotRetro(retroSummary1,
             add=T,
@@ -736,14 +786,17 @@ SSplotRetro(retroSummary1,
 ```
 ## Retro `s2`
 
-```{r warning = FALSE, message = FALSE, echo=FALSE}
+```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir2, oldsubdir="", 
       newsubdir="Retrospective", 
       years= 0:-5,
       exe="ss_osx",
       extras = "-nox", 
       skipfinished = F)
+```
 
+
+```{r warning = FALSE, message = FALSE}
 retroModels2 <- SSgetoutput(dirvec=file.path(dir2, "Retrospective",
                                              paste("retro",0:-5,
                                                    sep="")))
@@ -751,30 +804,32 @@ retroSummary2 <- SSsummarize(retroModels2)
 endyrvec <- retroSummary2$endyrs + 0:-5
 #save(retroSummary7, retroModels7, file="retros7.Rdata")
 
-
 SSplotRetro(retroSummary2,
             add=T,
             forecast = F,
             legend = T,
             verbose=F)
 ```
+
 ## Retro `s3`
 
-```{r warning = FALSE, message = FALSE, echo=FALSE}
+```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir3, oldsubdir="", 
       newsubdir="Retrospective", 
       years= 0:-5,
       exe="ss_osx",
       extras = "-nox", 
       skipfinished = F)
+```
 
+
+```{r warning = FALSE, message = FALSE}
 retroModels3 <- SSgetoutput(dirvec=file.path(dir3, "Retrospective",
                                              paste("retro",0:-5,
                                                    sep="")))
 retroSummary3 <- SSsummarize(retroModels3)
 endyrvec <- retroSummary3$endyrs + 0:-5
 #save(retroSummary7, retroModels7, file="retros7.Rdata")
-
 
 SSplotRetro(retroSummary3,
             add=T,
@@ -784,21 +839,23 @@ SSplotRetro(retroSummary3,
 ```
 ## Retro `s4`
 
-```{r warning = FALSE, message = FALSE, echo=FALSE}
+```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir4, oldsubdir="", 
       newsubdir="Retrospective", 
       years= 0:-5,
       exe="ss_osx",
       extras = "-nox", 
       skipfinished = F)
+```
 
+
+```{r warning = FALSE, message = FALSE}
 retroModels4 <- SSgetoutput(dirvec=file.path(dir4, "Retrospective",
                                              paste("retro",0:-5,
                                                    sep="")))
 retroSummary4 <- SSsummarize(retroModels4)
 endyrvec <- retroSummary4$endyrs + 0:-5
 #save(retroSummary7, retroModels7, file="retros7.Rdata")
-
 
 SSplotRetro(retroSummary4,
             add=T,
@@ -810,14 +867,17 @@ SShcbias(retroSummary4,quant="F",verbose=F)
 ```
 ## Retro `s5`
 
-```{r warning = FALSE, message = FALSE, echo=FALSE}
+```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir5, oldsubdir="", 
       newsubdir="Retrospective", 
       years= 0:-5,
       exe="ss_osx",
       extras = "-nox", 
       skipfinished = F)
+```
 
+
+```{r warning = FALSE, message = FALSE}
 retroModels5 <- SSgetoutput(dirvec=file.path(dir5, "Retrospective",
                                              paste("retro",0:-5,
                                                    sep="")))
@@ -825,25 +885,26 @@ retroSummary5 <- SSsummarize(retroModels5)
 endyrvec <- retroSummary5$endyrs + 0:-5
 #save(retroSummary7, retroModels7, file="retros7.Rdata")
 
-
 SSplotRetro(retroSummary5,
             add=T,
             forecast = F,
-            legend = F,
+            legend = T,
             verbose=F)
-SShcbias(retroSummary5,quant="SSB",verbose=F)
-SShcbias(retroSummary5,quant="F",verbose=F)
+#SShcbias(retroSummary5,quant="SSB",verbose=F)
 ```
 ## Retro `s6`
 
-```{r warning = FALSE, message = FALSE, echo=FALSE}
+```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir6, oldsubdir="", 
       newsubdir="Retrospective", 
       years= 0:-5,
       exe="ss_osx",
       extras = "-nox", 
       skipfinished = F)
+```
 
+
+```{r warning = FALSE, message = FALSE}
 retroModels6 <- SSgetoutput(dirvec=file.path(dir6, "Retrospective",
                                              paste("retro",0:-5,
                                                    sep="")))
@@ -851,25 +912,27 @@ retroSummary6 <- SSsummarize(retroModels6)
 endyrvec <- retroSummary6$endyrs + 0:-5
 #save(retroSummary7, retroModels7, file="retros7.Rdata")
 
-
 SSplotRetro(retroSummary6,
             add=T,
             forecast = F,
             legend = T,
             verbose=F)
-SShcbias(retroSummary6,quant="SSB",verbose=F)
-SShcbias(retroSummary6,quant="F",verbose=F)
+#SShcbias(retroSummary6,quant="SSB",verbose=F)
+#SShcbias(retroSummary6,quant="F",verbose=F)
 ```
 ## Retro `s7`
 
-```{r warning = FALSE, message = FALSE, echo=FALSE}
+```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir7, oldsubdir="", 
       newsubdir="Retrospective", 
       years= 0:-5,
       exe="ss_osx",
       extras = "-nox", 
       skipfinished = F)
+```
 
+
+```{r warning = FALSE, message = FALSE}
 retroModels7 <- SSgetoutput(dirvec=file.path(dir7, "Retrospective",
                                              paste("retro",0:-5,
                                                    sep="")))
@@ -877,173 +940,12 @@ retroSummary7 <- SSsummarize(retroModels7)
 endyrvec <- retroSummary7$endyrs + 0:-5
 #save(retroSummary7, retroModels7, file="retros7.Rdata")
 
-
 SSplotRetro(retroSummary7,
             add=T,
             forecast = F,
-            legend = F,
+            legend = T,
             verbose=F)
 ```
-
-::: {layout-ncol="2"}
-![Retro BRatio s1](~/IFOP/CBA/REINETA/Brama_2022a/s1/retrospectives/compare4_Bratio_uncertainty.png)
-
-![Retro SSB s1](~/IFOP/CBA/REINETA/Brama_2022/s1/retrospectives/compare2_spawnbio_uncertainty.png)
-:::
-
-```{r eval=F}
-mydir2 <- dir2
-
-SS_doRetro(
-  masterdir = mydir2,
-  oldsubdir = "",
-  newsubdir = "retrospectives",
-  years = 0:-5
-)
-
-
-```
-
-```{r eval=F, include=F , message=F}
-mydir <- dir2
-retroModels <- SSgetoutput(
-  dirvec = file.path(dir2, "retrospectives", paste("retro", 0:-5, sep = "", save.list=T))
-)
-retroSummary <- SSsummarize(retroModels)
-endyrvec <- retroSummary[["endyrs"]] + 0:-5
-
-dc2='~/IFOP/CBA/REINETA/Brama_2022/s2/retrospectives'
-SSplotComparisons(retroSummary,
-  endyrvec = endyrvec,
-  subplots = 1:4,
-  legendlabels = paste("Data", 0:-5, "years"),
-  print = TRUE,
-  png = TRUE,
-  plot=TRUE,
-  models = "all",
-  plotdir = dc2
-)
-
-
-```
-
-::: {layout-ncol="2"}
-![Retro BRatio s2](~/IFOP/CBA/REINETA/Brama_2022/s2/retrospectives/compare4_Bratio_uncertainty.png)
-
-![Retro SSB s2](~/IFOP/CBA/REINETA/Brama_2022/s2/retrospectives/compare2_spawnbio_uncertainty.png)
-:::
-
-```{r eval=F, message=F}
-mydir3 <- dir3
-
-SS_doRetro(
-  masterdir = mydir3,
-  oldsubdir = "",
-  newsubdir = "retrospectives",
-  years = 0:-5
-)
-
-
-```
-
-```{r eval=F, include=F , message=F}
-mydir3 <- dir3
-retroModels <- SSgetoutput(
-  dirvec = file.path(mydir3, "retrospectives", paste("retro", 0:-5, sep = ""))
-)
-retroSummary <- SSsummarize(retroModels)
-endyrvec <- retroSummary[["endyrs"]] + 0:-5
-
-dc3='~/IFOP/CBA/REINETA/Brama_2022/s3/retrospectives'
-SSplotComparisons(retroSummary,
-  endyrvec = endyrvec,
-  subplots = 1:4,
-  legendlabels = paste("Data", 0:-5, "years"),plot=TRUE, 
-print = TRUE, png = TRUE, models = "all",plotdir = dc3
-)
-
-
-```
-
-::: {layout-ncol="2"}
-![Retro BRatio s3](~/IFOP/CBA/REINETA/Brama_2022/s3/retrospectives/compare4_Bratio_uncertainty.png)
-
-![Retro SSB s3](~/IFOP/CBA/REINETA/Brama_2022/s3/retrospectives/compare2_spawnbio_uncertainty.png)
-:::
-
-```{r eval=F}
-mydir4 <- dir4
-
-SS_doRetro(
-  masterdir = mydir4,
-  oldsubdir = "",
-  newsubdir = "retrospectives",
-  years = 0:-5
-)
-
-
-```
-
-```{r eval=F, include=F , message=F}
-retroModels <- SSgetoutput(
-  dirvec = file.path(mydir4, "retrospectives", paste("retro", 0:-5, sep = ""))
-)
-retroSummary <- SSsummarize(retroModels)
-endyrvec <- retroSummary[["endyrs"]] + 0:-5
-
-dc4='~/IFOP/CBA/REINETA/Brama_2022/s4/retrospectives'
-SSplotComparisons(retroSummary,
-  endyrvec = endyrvec,
-  subplots = 1:4,
-  legendlabels = paste("Data", 0:-5, "years"),
-print = TRUE, png = TRUE, models = "all",plotdir = dc4
-)
-
-
-```
-
-::: {layout-ncol="2"}
-![Retro BRatio s4](~/IFOP/CBA/REINETA/Brama_2022/s4/retrospectives/compare4_Bratio_uncertainty.png)
-
-![Retro SSB s4](~/IFOP/CBA/REINETA/Brama_2022/s4/retrospectives/compare2_spawnbio_uncertainty.png)
-:::
-
-```{r eval=F}
-mydir5 <- dir5
-
-SS_doRetro(
-  masterdir = mydir5,
-  oldsubdir = "",
-  newsubdir = "retrospectives",
-  years = 0:-5
-)
-
-
-```
-
-```{r eval=F, include=F , message=F}
-retroModels <- SSgetoutput(
-  dirvec = file.path(mydir5, "retrospectives", paste("retro", 0:-5, sep = ""))
-)
-retroSummary <- SSsummarize(retroModels)
-endyrvec <- retroSummary[["endyrs"]] + 0:-5
-
-dc5='~/IFOP/CBA/REINETA/Brama_2022/s5/retrospectives'
-SSplotComparisons(retroSummary,
-  endyrvec = endyrvec,
-  subplots = 1:4,
-  legendlabels = paste("Data", 0:-5, "years"),
-print = TRUE, png = TRUE, models = "all",plotdir = dc5
-)
-
-
-```
-
-::: {layout-ncol="2"}
-![Retro BRatio s5](~/IFOP/CBA/REINETA/Brama_2022/s5/retrospectives/compare4_Bratio_uncertainty.png)
-
-![Retro SSB s5](~/IFOP/CBA/REINETA/Brama_2022/s5/retrospectives/compare2_spawnbio_uncertainty.png)
-:::
 
 \pagebreak
 
@@ -1059,11 +961,11 @@ mod.sum <- SSsummarize(list(base.model1,
                             base.model5,
                             base.model6,
                             base.model7))
-
 ```
 
-```{r eval=F, message=F}
+```{r message=F, warning=FALSE}
 SSplotComparisons(mod.sum,
+                  subplots = c(2,6,8),
                 legendlabels=c( "s1",
                                 "s2",
                                 "s3",
@@ -1077,32 +979,39 @@ SSplotComparisons(mod.sum,
                 plotdir = diri)
 ```
 
-::: {layout-ncol="2"}
-![SSB Comparado](images/compare2_spawnbio_uncertainty.png)
-
-![BR Comparado](images/compare4_Bratio_uncertainty.png)
-
-![SPR Comparado](images/compare6_SPRratio_uncertainty.png)
-
-![FComparado](images/compare8_Fvalue_uncertainty.png)
 
 
-![Reclutas Comparado](images/compare10_recruits_uncertainty.png)
-
-![Desvios R Comparado](images/compare12_recdevs_uncertainty.png)
 :::
 
 ```{r include=F, warning=F, message=F}
 # Table of comparisons
-comp <- SStableComparisons(mod.sum, models = "all", likenames = c("TOTAL", "Survey", "Length_comp", "Age_comp", "priors",
-  "Size_at_age"), names = c("Recr_Virgin", "R0", "steep", "NatM",
-  "L_at_Amax", "VonBert_K", "SSB_Virg", "Bratio_2021", "SPRratio_2021"),
-  digits = NULL, modelnames = c("s1", "s2","s3","s4","s5"))
+comp <- SStableComparisons(mod.sum, 
+                           models = "all", 
+                           likenames = c("TOTAL", 
+                                         "Survey",
+                                         "Length_comp", 
+                                         "Age_comp", "priors",
+                                         "Size_at_age"), 
+                           names = c("Recr_Virgin", 
+                                     "R0", "steep", 
+                                     "NatM",
+                                     "L_at_Amax", 
+                                     "VonBert_K",
+                                     "SSB_Virg",
+                                     "Bratio_2022", 
+                                     "SPRratio_2022"),
+  digits = NULL, modelnames = c("s1",
+                                "s2",
+                                "s3",
+                                "s4",
+                                "s5",
+                                "s6",
+                                "s7"))
 ```
 
 ```{r}
 kbl(comp, booktabs = T,format = "latex",
-    caption = "Comparacion likelihood y parámetros s1, s2, s3, s4 y s5")  %>% 
+    caption = "Comparacion likelihood y parámetros s1, s2, s3, s4, s5, s6 y s7")  %>% 
     kable_styling(latex_options = "HOLD_position")
 ```
 
