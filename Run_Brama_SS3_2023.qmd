@@ -734,7 +734,132 @@ SSplotRetro(retroSummary1,
             legend = F,
             verbose=F)
 ```
+## Retro `s2`
 
+```{r warning = FALSE, message = FALSE, echo=FALSE}
+retro(dir=dir2, oldsubdir="", 
+      newsubdir="Retrospective", 
+      years= 0:-5,
+      exe="ss_osx",
+      extras = "-nox", 
+      skipfinished = F)
+
+retroModels2 <- SSgetoutput(dirvec=file.path(dir2, "Retrospective",
+                                             paste("retro",0:-5,
+                                                   sep="")))
+retroSummary2 <- SSsummarize(retroModels2)
+endyrvec <- retroSummary2$endyrs + 0:-5
+#save(retroSummary7, retroModels7, file="retros7.Rdata")
+
+
+SSplotRetro(retroSummary2,
+            add=T,
+            forecast = F,
+            legend = T,
+            verbose=F)
+```
+## Retro `s3`
+
+```{r warning = FALSE, message = FALSE, echo=FALSE}
+retro(dir=dir3, oldsubdir="", 
+      newsubdir="Retrospective", 
+      years= 0:-5,
+      exe="ss_osx",
+      extras = "-nox", 
+      skipfinished = F)
+
+retroModels3 <- SSgetoutput(dirvec=file.path(dir3, "Retrospective",
+                                             paste("retro",0:-5,
+                                                   sep="")))
+retroSummary3 <- SSsummarize(retroModels3)
+endyrvec <- retroSummary3$endyrs + 0:-5
+#save(retroSummary7, retroModels7, file="retros7.Rdata")
+
+
+SSplotRetro(retroSummary3,
+            add=T,
+            forecast = F,
+            legend = T,
+            verbose=F)
+```
+## Retro `s4`
+
+```{r warning = FALSE, message = FALSE, echo=FALSE}
+retro(dir=dir4, oldsubdir="", 
+      newsubdir="Retrospective", 
+      years= 0:-5,
+      exe="ss_osx",
+      extras = "-nox", 
+      skipfinished = F)
+
+retroModels4 <- SSgetoutput(dirvec=file.path(dir4, "Retrospective",
+                                             paste("retro",0:-5,
+                                                   sep="")))
+retroSummary4 <- SSsummarize(retroModels4)
+endyrvec <- retroSummary4$endyrs + 0:-5
+#save(retroSummary7, retroModels7, file="retros7.Rdata")
+
+
+SSplotRetro(retroSummary4,
+            add=T,
+            forecast = F,
+            legend = F,
+            verbose=F)
+SShcbias(retroSummary4,quant="SSB",verbose=F)
+SShcbias(retroSummary4,quant="F",verbose=F)
+```
+## Retro `s5`
+
+```{r warning = FALSE, message = FALSE, echo=FALSE}
+retro(dir=dir5, oldsubdir="", 
+      newsubdir="Retrospective", 
+      years= 0:-5,
+      exe="ss_osx",
+      extras = "-nox", 
+      skipfinished = F)
+
+retroModels5 <- SSgetoutput(dirvec=file.path(dir5, "Retrospective",
+                                             paste("retro",0:-5,
+                                                   sep="")))
+retroSummary5 <- SSsummarize(retroModels5)
+endyrvec <- retroSummary5$endyrs + 0:-5
+#save(retroSummary7, retroModels7, file="retros7.Rdata")
+
+
+SSplotRetro(retroSummary5,
+            add=T,
+            forecast = F,
+            legend = F,
+            verbose=F)
+SShcbias(retroSummary5,quant="SSB",verbose=F)
+SShcbias(retroSummary5,quant="F",verbose=F)
+```
+## Retro `s6`
+
+```{r warning = FALSE, message = FALSE, echo=FALSE}
+retro(dir=dir6, oldsubdir="", 
+      newsubdir="Retrospective", 
+      years= 0:-5,
+      exe="ss_osx",
+      extras = "-nox", 
+      skipfinished = F)
+
+retroModels6 <- SSgetoutput(dirvec=file.path(dir6, "Retrospective",
+                                             paste("retro",0:-5,
+                                                   sep="")))
+retroSummary6 <- SSsummarize(retroModels6)
+endyrvec <- retroSummary6$endyrs + 0:-5
+#save(retroSummary7, retroModels7, file="retros7.Rdata")
+
+
+SSplotRetro(retroSummary6,
+            add=T,
+            forecast = F,
+            legend = T,
+            verbose=F)
+SShcbias(retroSummary6,quant="SSB",verbose=F)
+SShcbias(retroSummary6,quant="F",verbose=F)
+```
 ## Retro `s7`
 
 ```{r warning = FALSE, message = FALSE, echo=FALSE}
