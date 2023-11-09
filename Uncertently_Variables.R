@@ -123,7 +123,7 @@ p <- ggplot() +
   geom_vline(xintercept = 1,
              linetype = 'dashed',
              color = 'red')+
-  geom_hline(yintercept = 0.38,
+  geom_hline(yintercept = 0.318,
              color = 'blue')+
   xlim(0,3)+
   ylim(0,0.5)+
