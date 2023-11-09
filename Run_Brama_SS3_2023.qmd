@@ -98,8 +98,7 @@ Desembarque industrial y artesanal del período (1994-2021) separados por flota,
 Los desembarques utilizados para cada una de las flotas que generan remoción en el recurso reineta, a saber; espinel, enmalle e industrial (Figura 6).
 
 ```{r eval=F, fig.pos="H", fig.cap= "Desembarques de reineta por flota"}
-dat <- r4ss::SS_readdat(file = file.path(dir7, 
-                                         start$datfile),
+dat <- r4ss::SS_readdat(file = file.path(dir7, start$datfile),
                         verbose = FALSE)
 flotas <- c(`2` = "Enmalle",
             `1` = "Espinel",
@@ -626,7 +625,7 @@ SSplotComps(base.model7, subplots = 1,
 
 ### Biomasa desovante
 
-::: {layout-ncol="4"}
+::: {layout-ncol="2"}
 
 ```{r fig.cap="Biomasa total s1", fig.pos="H"}
 SSplotTimeseries(base.model1, 
@@ -673,11 +672,11 @@ SSplotTimeseries(base.model7,
 :::
 
 \pagebreak 
-## Reclutamiento
+### Reclutamiento
 
 Las siguientes figuras muestran los desvios del reclutamiento para los todos los escenarios
 
-::: {layout-ncol="4"}
+::: {layout-ncol="2"}
 ```{r fig.cap=" Dev recruits s1", fig.pos="H"}
 SSplotRecdevs(base.model1, 
               subplot = 3)
@@ -715,11 +714,11 @@ SSplotRecdevs(base.model7,
 
 \pagebreak
 
-## Mortalidad por pesca
+### Mortalidad por pesca
 
 La mortalidad por pesca se identifica en las siguientes figuras.
 
-::: {layout-ncol="4"}
+::: {layout-ncol="2"}
 ```{r fig.cap=" Mortalidad pot Pesca s1", fig.pos="H"}
 SSplotSummaryF(base.model1,
                Ftgt = 0.35)
@@ -758,9 +757,9 @@ SSplotSummaryF(base.model7,
 \pagebreak
 
 
-## Diagnostico
+### Diagnostico
 
-### Residuales
+#### Residuales
 
 ```{r}
 
@@ -783,7 +782,7 @@ jr = SSplotJABBAres(base.model1, add = T, indexselect = c(1, 3:6), legendcex = 0
 
 Los análisis retrospectivo, dan cuenta de diferencias de estimación (sub - sobreestimación) en los patrones entre modelos evaluados a través del parámetro de Mho.
 
-### Retro `s1`
+##### Retro `s1`
 
 ```{r eval=FALSE, warning = FALSE, message = FALSE}
 retro(dir=dir1, oldsubdir="", 
@@ -810,7 +809,7 @@ SSplotRetro(retroSummary1,
             legend = F,
             verbose=F)
 ```
-### Retro `s2`
+##### Retro `s2`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir2, oldsubdir="", 
@@ -837,7 +836,7 @@ SSplotRetro(retroSummary2,
             verbose=F)
 ```
 
-### Retro `s3`
+##### Retro `s3`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir3, oldsubdir="", 
@@ -863,7 +862,7 @@ SSplotRetro(retroSummary3,
             legend = T,
             verbose=F)
 ```
-### Retro `s4`
+##### Retro `s4`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir4, oldsubdir="", 
@@ -891,7 +890,7 @@ SSplotRetro(retroSummary4,
 SShcbias(retroSummary4,quant="SSB",verbose=F)
 SShcbias(retroSummary4,quant="F",verbose=F)
 ```
-### Retro `s5`
+##### Retro `s5`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir5, oldsubdir="", 
@@ -918,7 +917,7 @@ SSplotRetro(retroSummary5,
             verbose=F)
 #SShcbias(retroSummary5,quant="SSB",verbose=F)
 ```
-### Retro `s6`
+##### Retro `s6`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir6, oldsubdir="", 
@@ -946,7 +945,7 @@ SSplotRetro(retroSummary6,
 #SShcbias(retroSummary6,quant="SSB",verbose=F)
 #SShcbias(retroSummary6,quant="F",verbose=F)
 ```
-### Retro `s7`
+##### Retro `s7`
 
 ```{r warning = FALSE, message = FALSE, eval=FALSE}
 retro(dir=dir7, oldsubdir="", 

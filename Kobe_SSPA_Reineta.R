@@ -1,13 +1,12 @@
 
 library(readr)
 library(egg)
+library(ggthemes)
 library(see)
-Kobe_Outputs <- read_csv("Kobe_Outputs.csv")
+library(tidyverse)
+Kobe_Outputs <- read_csv("~/IFOP/CBA/REINETA/2023/SA/Brama_SA_2023/Kobe_Outputs.csv")
 View(Kobe_Outputs)
 # enero el vector con ambos parámetros
-
-kobebroint <- cbind(FFMSY, BBMSY[,2])
-#write.csv(kobebro, "kobebro.csv", sep=",")
 
 
 # Genero el diagrama con lo disppuesto por el CCTRDAP (Subpesca, 2015)
@@ -23,8 +22,7 @@ texto_coords <- data.frame(
 # Gráfico Zhou Model
 
 zhou <- ggplot(Kobe_Outputs %>%
-         filter(Yr < 2022,
-                Escenario == "Zhou Model"))+
+         filter(Escenario == "Zhou Model"))+
   #geom_line(aes(kobebro$BBMSY, kobebro$FFMSY)) +
   geom_rect(aes(xmin = 0, xmax = 0.5, ymin = 0, ymax = 3),
             fill = "#E43338", alpha = 0.5) +
